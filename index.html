@@ -3,34 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quantum Alpha PRO v19.5 | Full Logic Integrity</title>
+    <title>Quantum Alpha PRO v19.6 | No-Menu Edition</title>
     <style>
         :root {
             --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
             --up: #238636; --down: #da3633; --text: #c9d1d9; --gold: #f1e05a;
             --noise: #d29922; --flex-on: #8957e5; --neutral: #30363d;
         }
-        body { background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 10px; }
-        * { user-select: none; box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        /* Bloqueo visual de selección de texto */
+        body { 
+            background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; 
+            display: flex; justify-content: center; align-items: center; min-height: 100vh; 
+            margin: 0; padding: 10px; overflow: hidden;
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+        }
+        * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
         .terminal { 
             background: var(--panel-bg); width: 100%; max-width: 500px; border: 2px solid var(--neutral); border-radius: 12px; padding: 20px; 
             box-shadow: 0 20px 50px rgba(0,0,0,0.8); position: relative; transition: all 0.3s ease;
         }
 
-        /* Heatmap Visual */
         #heatmap-bar { width: 100%; height: 6px; background: var(--neutral); margin-bottom: 15px; border-radius: 3px; overflow: hidden; }
         #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.5s; }
 
         .selectors { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
-        
-        /* GRID DE TIEMPOS: Asegura que 3S y 5S sean visibles */
-        .time-selector { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 6px; 
-        }
-        
+        .time-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
         .risk-selector { display: flex; gap: 6px; }
         
         .btn { 
@@ -42,8 +40,13 @@
         .btn-flex { border-color: var(--flex-on); color: var(--flex-on); flex: 1.5; }
         .btn-flex.active { background: var(--flex-on) !important; color: white !important; }
 
-        #mouseBtn { width:100%; padding:14px; margin-bottom:10px; border-radius:8px; cursor:pointer; background:#21262d; color:#f1e05a; font-weight:bold; border:1px solid #30363d; position: relative; z-index: 1000; }
-        #mouse-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 500; cursor: crosshair; background: rgba(0,0,0,0.01); }
+        #mouseBtn { width:100%; padding:14px; margin-bottom:10px; border-radius:8px; cursor:pointer; background:#21262d; color:#f1e05a; font-weight:bold; border:1px solid #30363d; z-index: 1001; position: relative; }
+        
+        /* El overlay ahora bloquea todo evento de menú */
+        #mouse-overlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            z-index: 1000; cursor: crosshair; background: rgba(0,0,0,0.01); 
+        }
 
         .monitor { background: #010409; border-radius: 8px; padding: 15px; text-align: center; margin-bottom: 10px; border: 1px solid #30363d; }
         #last-sequence { font-size: 2.4rem; letter-spacing: 10px; font-family: 'Consolas', monospace; color: #fff; display: block; min-height: 45px; }
@@ -57,24 +60,23 @@
         
         #smart-stake { background: rgba(88, 166, 255, 0.1); border-radius: 6px; padding: 10px; margin-bottom: 15px; text-align: center; font-size: 0.8rem; color: var(--accent); border: 1px dashed var(--accent); display: none; }
 
-        .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; position: relative; z-index: 1000; }
+        .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; position: relative; z-index: 1001; }
         .feed-btn { padding: 15px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; opacity: 0.1; pointer-events: none; transition: 0.3s; font-size: 1.1rem; }
         .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: scale(1.02); }
 
-        .session-log { background: rgba(0,0,0,0.4); border-radius: 8px; padding: 15px; border: 1px solid #30363d; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; position: relative; z-index: 1000; }
+        .session-log { background: rgba(0,0,0,0.4); border-radius: 8px; padding: 15px; border: 1px solid #30363d; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; z-index: 1001; position: relative; }
         .stat-card { text-align: center; }
         .stat-label { font-size: 0.65rem; color: #8b949e; text-transform: uppercase; display: block; }
         .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
 
-        .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #30363d; }
-        .touch-btn { padding: 15px; border-radius: 8px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 1000; }
+        .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #30363d; z-index: 1001; position: relative; }
+        .touch-btn { padding: 15px; border-radius: 8px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .touch-up { border-left: 4px solid var(--up); }
         .touch-down { border-left: 4px solid var(--down); }
 
-        .btn-export { margin-top: 15px; width: 100%; padding: 12px; background: #21262d; color: var(--gold); border: 1px solid #30363d; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-export { margin-top: 15px; width: 100%; padding: 12px; background: #21262d; color: var(--gold); border: 1px solid #30363d; border-radius: 8px; cursor: pointer; font-weight: bold; z-index: 1001; position: relative; }
         .btn-reset { margin-top:10px; background:#da3633; color:white; border: none; }
 
-        /* ESTADOS DE TERMINAL LOGICOS */
         .conf-high { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(241, 224, 90, 0.4); }
         .term-up { background: #062a14 !important; border-color: var(--up) !important; }
         .term-down { background: #320a0a !important; border-color: var(--down) !important; }
@@ -82,9 +84,7 @@
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/ort.min.js"></script>
 </head>
-<body oncontextmenu="return false;">
-
-<div id="mouse-overlay"></div>
+<body oncontextmenu="return false;"> <div id="mouse-overlay"></div>
 
 <div class="terminal" id="main-terminal">
     <div id="heatmap-bar"><div id="heatmap-fill"></div></div>
@@ -147,6 +147,9 @@
 </div>
 
 <script>
+    // BLOQUEO TOTAL DE MENÚ CONTEXTUAL
+    document.addEventListener('contextmenu', event => event.preventDefault());
+
     let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
     let lastClickTime = 0, lastSignalTime = 0, lastManualInjectionTime = 0;
     let riskLevel = 2, lastSignalData = null, ortSession = null;
@@ -212,16 +215,26 @@
         analyze();
     }
 
-    document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
+    // LISTENER MEJORADO PARA EL OVERLAY
+    const overlay = document.getElementById('mouse-overlay');
+    overlay.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Previene cualquier acción del sistema
+        e.stopPropagation(); // Evita que el evento suba
+        
         const now = Date.now();
         const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
         lastClickTime = now;
-        let val = (e.button === 0) ? 'B' : (e.button === 2 ? 'A' : "");
+        
+        let val = "";
+        if (e.button === 0) val = 'B'; // Click Izquierdo -> Venta
+        if (e.button === 2) val = 'A'; // Click Derecho -> Compra
+        
         if(val !== "") {
             sequence.push({val, diff});
             if(sequence.length > 12) sequence.shift();
             analyze();
         }
+        return false;
     });
 
     async function analyze() {
@@ -233,7 +246,6 @@
         
         document.getElementById('last-sequence').innerText = seqStr || '---';
 
-        // LOGICA DE RUIDO
         const oscillationCount = (seqStr.match(/AB|BA/g) || []).length;
         const noiseIndex = Math.min(100, Math.round((oscillationCount / Math.max(1, seqStr.length - 1)) * 120));
         const recentAvgSpeed = sequence.slice(-5).reduce((acc, s) => acc + s.diff, 0) / Math.max(1, sequence.slice(-5).length);
@@ -270,7 +282,7 @@
             heatmap.style.width = (iaProb * 100) + "%";
             heatmap.style.background = type === "COMPRA" ? "var(--up)" : "var(--down)";
             stakeDiv.style.display = "block";
-            stakeDiv.innerHTML = iaProb > 0.8 ? "💰 <strong>SMART STAKE:</strong> 5%" : (iaProb > 0.6 ? "💵 <strong>SMART STAKE:</strong> 2%" : "⚠️ <strong>RIESGO ALTO</strong>");
+            stakeDiv.innerHTML = iaProb > 0.8 ? "💰 SMART STAKE: 5%" : (iaProb > 0.6 ? "💵 SMART STAKE: 2%" : "⚠️ RIESGO ALTO");
         } else {
             heatmap.style.width = "0%"; stakeDiv.style.display = "none";
             confElement.innerText = "ESPERANDO IMPULSO...";
