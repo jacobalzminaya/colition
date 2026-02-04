@@ -2,28 +2,25 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Quantum Alpha v18.6 | IA Stable + Local Load</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quantum Alpha PRO v19.0 | IA + Smart Capital</title>
     <style>
         :root {
             --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
             --up: #238636; --down: #da3633; --text: #c9d1d9; --gold: #f1e05a;
-            --noise: #d29922; --flex-on: #8957e5;
+            --noise: #d29922; --flex-on: #8957e5; --neutral: #30363d;
         }
         body { background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        
-        /* Optimizaciones para móvil */
-        * { 
-            user-select: none; 
-            box-sizing: border-box; 
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { user-select: none; box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
         .terminal { 
-            background: var(--panel-bg); width: 520px; border: 2px solid #30363d; border-radius: 12px; padding: 25px; 
+            background: var(--panel-bg); width: 520px; border: 2px solid var(--neutral); border-radius: 12px; padding: 25px; 
             box-shadow: 0 20px 50px rgba(0,0,0,0.8); position: relative; transition: all 0.3s ease;
         }
+
+        /* --- Barra de Calor (Heatmap) --- */
+        #heatmap-bar { width: 100%; height: 6px; background: var(--neutral); margin-bottom: 15px; border-radius: 3px; overflow: hidden; }
+        #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.5s, background 0.5s; }
 
         .selectors { position: relative; z-index: 1000; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
         .time-selector, .risk-selector { display: flex; gap: 5px; }
@@ -43,7 +40,10 @@
         #noise-index { font-size: 0.8rem; color: var(--noise); }
 
         #op-status { font-weight: bold; font-size: 1.5rem; text-align: center; display: block; margin: 12px 0; color: #fff; min-height: 30px; }
-        #op-confidence { font-size: 0.85rem; color: #8b949e; text-align: center; display: block; margin-bottom: 15px; min-height: 45px; border-bottom: 1px solid #30363d; padding-bottom: 10px; transition: color 0.3s; white-space: pre-line; }
+        #op-confidence { font-size: 0.85rem; color: #8b949e; text-align: center; display: block; margin-bottom: 5px; min-height: 55px; border-bottom: 1px solid #30363d; padding-bottom: 10px; transition: color 0.3s; white-space: pre-line; }
+        
+        /* --- Sugerencia Smart Stake --- */
+        #smart-stake { background: rgba(88, 166, 255, 0.1); border-radius: 6px; padding: 8px; margin-bottom: 15px; text-align: center; font-size: 0.8rem; color: var(--accent); border: 1px dashed var(--accent); display: none; }
 
         .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; position: relative; z-index: 1000; }
         .feed-btn { padding: 15px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; opacity: 0.1; pointer-events: none; transition: 0.3s; font-size: 1.1rem; }
@@ -64,7 +64,6 @@
         .btn-export { margin-top: 15px; width: 100%; padding: 10px; background: #21262d; color: var(--gold); border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-weight: bold; position: relative; z-index: 1000; }
         .btn-reset { margin-top:10px; background:#da3633; color:white; border: none; }
 
-        /* Estados especiales */
         .conf-high { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(241, 224, 90, 0.4); }
         .term-up { background: #062a14 !important; border-color: var(--up) !important; }
         .term-down { background: #320a0a !important; border-color: var(--down) !important; }
@@ -77,6 +76,8 @@
 <div id="mouse-overlay"></div>
 
 <div class="terminal" id="main-terminal">
+    <div id="heatmap-bar"><div id="heatmap-fill"></div></div>
+    
     <div class="selectors">
         <div class="time-selector">
             <button class="btn active" onclick="setTime(10, this)">10S</button>
@@ -104,6 +105,8 @@
 
     <span id="op-status">IDLE</span>
     <div id="op-confidence">ESPERANDO IMPULSO...</div>
+    
+    <div id="smart-stake">GESTIÓN: ESPERANDO SEÑAL</div>
 
     <div class="feedback-container">
         <button id="winBtn" class="feed-btn" style="background:var(--up)" onclick="logResult(true)">WIN</button>
@@ -125,11 +128,11 @@
         <span class="manual-label">Modo Manual / Touch</span>
         <button class="touch-btn touch-up" onclick="injectManual('A')">
             <span>⬆️ ALCISTA</span>
-            <small style="font-size: 0.6rem; opacity: 0.7;">FORZAR COMPRA</small>
+            <small style="font-size: 0.6rem; opacity: 0.7;">SUMAR COMPRA</small>
         </button>
         <button class="touch-btn touch-down" onclick="injectManual('B')">
             <span>⬇️ BAJISTA</span>
-            <small style="font-size: 0.6rem; opacity: 0.7;">FORZAR VENTA</small>
+            <small style="font-size: 0.6rem; opacity: 0.7;">SUMAR VENTA</small>
         </button>
     </div>
 
@@ -146,25 +149,23 @@
     const minRachaByLevel = {1: 3, 2: 4, 3: 5};
     const noiseThresholdByLevel = {1: 65, 2: 55, 3: 50};
 
-async function loadModel() {
-    if (ortSession) return;
-    const conf = document.getElementById('op-confidence');
-    try {
-        conf.innerText = "VERIFICANDO INTEGRIDAD...";
-        ort.env.wasm.numThreads = 1;
-        ort.env.wasm.simd = false;
-        const response = await fetch('./quantum_model.onnx?v=' + Date.now());
-        if (!response.ok) throw new Error("No se pudo descargar el modelo");
-        const buffer = await response.arrayBuffer();
-        ortSession = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
-        conf.innerText = "IA: ONLINE";
-        conf.style.color = "#238636";
-    } catch (e) {
-        console.error("Error:", e);
-        conf.innerText = "ERROR DE CARGA";
-        conf.style.color = "#da3633";
+    async function loadModel() {
+        if (ortSession) return;
+        const conf = document.getElementById('op-confidence');
+        try {
+            conf.innerText = "VERIFICANDO INTEGRIDAD...";
+            ort.env.wasm.numThreads = 1;
+            ort.env.wasm.simd = false;
+            const response = await fetch('./quantum_model.onnx?v=' + Date.now());
+            const buffer = await response.arrayBuffer();
+            ortSession = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
+            conf.innerText = "IA: ONLINE";
+            conf.style.color = "#238636";
+        } catch (e) {
+            conf.innerText = "ERROR DE CARGA";
+            conf.style.color = "#da3633";
+        }
     }
-}
 
     function setRisk(level, button) {
         riskLevel = level;
@@ -197,19 +198,15 @@ async function loadModel() {
         if(!mouseEnabled) resetUI();
     }
 
-    // --- CORRECCIÓN TOUCH ACUMULATIVO ---
     function injectManual(side) {
         const now = Date.now();
         if (now - lastManualInjectionTime < 250) return;
         lastManualInjectionTime = now;
-
+        if(navigator.vibrate) navigator.vibrate(40);
         const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
         lastClickTime = now;
-
-        // Ahora SUMA a la secuencia en lugar de borrarla
         sequence.push({ val: side, diff: diff });
         if(sequence.length > 12) sequence.shift();
-        
         analyze();
     }
 
@@ -230,11 +227,19 @@ async function loadModel() {
         const seqStr = sequence.map(s => s.val).join('');
         const terminal = document.getElementById('main-terminal');
         const confElement = document.getElementById('op-confidence');
+        const heatmap = document.getElementById('heatmap-fill');
+        const stakeDiv = document.getElementById('smart-stake');
+        
         document.getElementById('last-sequence').innerText = seqStr || '---';
 
         const oscillationCount = (seqStr.match(/AB|BA/g) || []).length;
         const noiseIndex = Math.min(100, Math.round((oscillationCount / Math.max(1, seqStr.length - 1)) * 120));
-        const recentAvgSpeed = sequence.slice(-5).reduce((acc, s) => acc + s.diff, 0) / Math.max(1, sequence.slice(-5).length);
+        const recentDiffs = sequence.slice(-5).map(s => s.diff);
+        const recentAvgSpeed = recentDiffs.reduce((acc, s) => acc + s.diff, 0) / Math.max(1, recentDiffs.length);
+
+        // --- Mejora: Momentum Decay (Si es muy lento, baja la fuerza) ---
+        const lastDiff = sequence.length > 0 ? sequence[sequence.length-1].diff : 0;
+        let decay = lastDiff > 1500 ? 0.6 : 1.0; 
 
         document.getElementById('speed-meter').innerText = `MOMENTUM: ${Math.round(recentAvgSpeed)}ms`;
         document.getElementById('noise-index').innerText = `RUIDO: ${noiseIndex}%`;
@@ -246,13 +251,13 @@ async function loadModel() {
         let type = null, strength = 0;
         if (new RegExp('A{' + minR + ',}').test(seqStr) && !isChoppy) {
             type = "COMPRA";
-            strength = (seqStr.slice(-6).match(/A/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1);
+            strength = ((seqStr.slice(-6).match(/A/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1)) * decay;
         } else if (new RegExp('B{' + minR + ',}').test(seqStr) && !isChoppy) {
             type = "VENTA";
-            strength = (seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1);
+            strength = ((seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1)) * decay;
         }
 
-        let confidenceMsg = "ESPERANDO IMPULSO...", finalColor = '#8b949e';
+        let confidenceMsg = "ESPERANDO IMPULSO...", finalColor = '#8b949e', iaProb = 0;
         
         if (type) {
             confidenceMsg = `Fuerza: ${strength.toFixed(1)} | Ruido: ${noiseIndex}%`;
@@ -260,12 +265,26 @@ async function loadModel() {
                 try {
                     const inputTensor = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode ? 1 : 0]), [1, 4]);
                     const results = await ortSession.run({ input: inputTensor });
-                    const prob = results.prob_win.data[0];
-                    confidenceMsg += `\nIA PROB: ${Math.round(prob * 100)}%`;
+                    iaProb = results.prob_win.data[0];
+                    confidenceMsg += `\nIA PROB: ${Math.round(iaProb * 100)}%`;
                 } catch (e) { console.error(e); }
             }
-            if (strength >= 7) { finalColor = '#f1e05a'; }
-            else if (strength > 3) { finalColor = '#58a6ff'; }
+            if (strength >= 7) finalColor = '#f1e05a';
+            else if (strength > 3) finalColor = '#58a6ff';
+
+            // Actualizar Heatmap
+            heatmap.style.width = (iaProb * 100) + "%";
+            heatmap.style.background = type === "COMPRA" ? "var(--up)" : "var(--down)";
+
+            // --- Mejora: Sugerencia Smart Stake ---
+            stakeDiv.style.display = "block";
+            if (iaProb > 0.8) stakeDiv.innerHTML = "💰 <strong>SUGERENCIA:</strong> ENTRADA FUERTE (3-5%)";
+            else if (iaProb > 0.6) stakeDiv.innerHTML = "💵 <strong>SUGERENCIA:</strong> ENTRADA NORMAL (1-2%)";
+            else stakeDiv.innerHTML = "⚠️ <strong>SUGERENCIA:</strong> PRECAUCIÓN / MINIMO";
+
+        } else {
+            heatmap.style.width = "0%";
+            stakeDiv.style.display = "none";
         }
 
         confElement.innerText = confidenceMsg;
@@ -287,7 +306,7 @@ async function loadModel() {
     function logResult(isWin) {
         if (!lastSignalData) return;
         tradeHistory.push({ ...lastSignalData, result: isWin ? 1 : 0, timestamp: new Date().toLocaleTimeString() });
-        localStorage.setItem('quantum_v18_trades', JSON.stringify(tradeHistory));
+        localStorage.setItem('quantum_v19_trades', JSON.stringify(tradeHistory));
         updateStats();
         sequence = []; resetUI();
     }
@@ -301,7 +320,7 @@ async function loadModel() {
 
     function resetAllData() {
         if (confirm("¿Borrar historial?")) {
-            tradeHistory = []; localStorage.removeItem('quantum_v18_trades');
+            tradeHistory = []; localStorage.removeItem('quantum_v19_trades');
             updateStats(); resetUI();
         }
     }
@@ -310,6 +329,8 @@ async function loadModel() {
         document.getElementById('op-status').innerText = mouseEnabled ? "RADAR ACTIVO" : "IDLE";
         document.getElementById('main-terminal').className = 'terminal';
         document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
+        document.getElementById('heatmap-fill').style.width = "0%";
+        document.getElementById('smart-stake').style.display = "none";
         lastSignalData = null;
     }
 
@@ -319,7 +340,7 @@ async function loadModel() {
         tradeHistory.forEach(t => csv += `${t.type},${t.risk},${t.strength.toFixed(2)},${t.noise},${t.flex},${t.result},${t.timestamp}\n`);
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
-        a.download = `quantum_v18_export.csv`; a.click();
+        a.download = `quantum_v19_pro_export.csv`; a.click();
     }
 </script>
 </body>
