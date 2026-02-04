@@ -138,28 +138,42 @@
     const noiseThresholdByLevel = {1: 65, 2: 55, 3: 50};
 
     // CARGA DE IA (VINCULADA LOCALMENTE SIN TOKEN)
-    async function loadModel() {
-        if (ortSession) return;
-        
-        // PARCHE DE COMPATIBILIDAD CRÍTICO
-        ort.env.wasm.numThreads = 1;
-        ort.env.wasm.simd = false; 
+async function loadModel() {
+    if (ortSession) return;
+    
+    const confElement = document.getElementById('op-confidence');
+    confElement.innerText = "INTENTANDO CONECTAR IA...";
 
+    ort.env.wasm.numThreads = 1;
+    ort.env.wasm.simd = false; 
+
+    try {
+        // Probamos primero la carga local (más rápida en GitHub Pages)
+        // Esto asume que el archivo está en la misma carpeta que el index.html
+        ortSession = await ort.InferenceSession.create('./quantum_model.onnx', {
+            executionProviders: ['wasm']
+        });
+        
+        console.log("✅ IA Quantum Conectada Localmente");
+        confElement.innerText = "IA: ONLINE (LOCAL)";
+        confElement.style.color = "#238636";
+    } catch (err) {
+        console.warn("Fallo local, intentando vía URL externa...");
         try {
-            // Busca el archivo 'quantum_model.onnx' en la misma carpeta que este HTML
-            ortSession = await ort.InferenceSession.create('./quantum_model.onnx');
-            console.log("¡IA Quantum Cargada Localmente!");
-            document.getElementById('op-confidence').innerText = "IA: ONLINE";
-        } catch (err) { 
-            console.error("Error IA:", err);
-            document.getElementById('op-confidence').innerText = "IA: ERROR DE ARCHIVO LOCAL";
+            // Si falla el local, intentamos la URL de GitHub con un bypass de caché
+            const modelUrl = 'https://raw.githubusercontent.com/jacobalzminaya/colition/main/quantum_model.onnx?nocache=' + Date.now();
+            ortSession = await ort.InferenceSession.create(modelUrl, {
+                executionProviders: ['wasm']
+            });
+            confElement.innerText = "IA: ONLINE (GITHUB)";
+            confElement.style.color = "#238636";
+        } catch (err2) {
+            console.error("Fallo total:", err2);
+            confElement.innerText = "IA: ERROR " + err2.message;
+            confElement.style.color = "#da3633";
         }
     }
-
-    if (localStorage.getItem('quantum_v18_trades')) {
-        tradeHistory = JSON.parse(localStorage.getItem('quantum_v18_trades'));
-        setTimeout(updateStats, 100);
-    }
+}
 
     function setRisk(level, button) {
         riskLevel = level;
@@ -309,3 +323,4 @@
 </script>
 </body>
 </html>
+
