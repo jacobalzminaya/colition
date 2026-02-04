@@ -3,76 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quantum Alpha PRO v19.2 | Total Integrity</title>
+    <title>Quantum Alpha PRO v19.3 | Visible Buttons</title>
     <style>
         :root {
             --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
             --up: #238636; --down: #da3633; --text: #c9d1d9; --gold: #f1e05a;
             --noise: #d29922; --flex-on: #8957e5; --neutral: #30363d;
         }
-        body { background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        body { background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 10px; }
         * { user-select: none; box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
         .terminal { 
-            background: var(--panel-bg); width: 520px; border: 2px solid var(--neutral); border-radius: 12px; padding: 25px; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8); position: relative; transition: all 0.3s ease;
+            background: var(--panel-bg); width: 100%; max-width: 500px; border: 2px solid var(--neutral); border-radius: 12px; padding: 20px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8); position: relative;
         }
 
-        /* Heatmap PRO */
         #heatmap-bar { width: 100%; height: 6px; background: var(--neutral); margin-bottom: 15px; border-radius: 3px; overflow: hidden; }
-        #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.5s, background 0.5s; }
+        #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.5s; }
 
-        .selectors { position: relative; z-index: 1000; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        .time-selector, .risk-selector { display: flex; gap: 4px; flex-wrap: wrap; }
+        .selectors { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
         
-        /* Botones ajustados para que quepan todos */
-        .btn { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 8px 2px; border-radius: 5px; cursor: pointer; flex: 1; font-size: 0.65rem; text-align: center; font-weight: bold; min-width: 40px; }
+        /* CONTENEDOR DE TIEMPO EN MALLA (2 FILAS) */
+        .time-selector { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 6px; 
+        }
+        
+        .risk-selector { display: flex; gap: 6px; }
+        
+        .btn { 
+            background: #21262d; border: 1px solid #30363d; color: #8b949e; 
+            padding: 12px 5px; border-radius: 6px; cursor: pointer; 
+            font-size: 0.75rem; text-align: center; font-weight: bold; 
+        }
         .btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-        .btn-flex { border-color: var(--flex-on); color: var(--flex-on); min-width: 70px; }
+        .btn-flex { border-color: var(--flex-on); color: var(--flex-on); flex: 1.5; }
         .btn-flex.active { background: var(--flex-on) !important; color: white !important; }
 
-        #mouseBtn { width:100%; padding:12px; margin-bottom:10px; border-radius:8px; cursor:pointer; background:#21262d; color:#f1e05a; font-weight:bold; border:1px solid #30363d; position: relative; z-index: 1000; }
-        #mouse-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 500; cursor: crosshair; background: rgba(0,0,0,0.01); }
+        #mouseBtn { width:100%; padding:14px; margin-bottom:10px; border-radius:8px; cursor:pointer; background:#21262d; color:#f1e05a; font-weight:bold; border:1px solid #30363d; }
+        #mouse-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 500; background: rgba(0,0,0,0.01); }
 
         .monitor { background: #010409; border-radius: 8px; padding: 15px; text-align: center; margin-bottom: 10px; border: 1px solid #30363d; }
-        #last-sequence { font-size: 2.4rem; letter-spacing: 10px; font-family: 'Consolas', monospace; color: #fff; display: block; min-height: 45px; }
-        .indicators { margin-top: 10px; display: flex; justify-content: center; gap: 20px; }
-        #speed-meter { font-size: 0.8rem; color: var(--gold); }
-        #noise-index { font-size: 0.8rem; color: var(--noise); }
-
-        #op-status { font-weight: bold; font-size: 1.5rem; text-align: center; display: block; margin: 12px 0; color: #fff; min-height: 30px; }
-        #op-confidence { font-size: 0.85rem; color: #8b949e; text-align: center; display: block; margin-bottom: 5px; min-height: 55px; border-bottom: 1px solid #30363d; padding-bottom: 10px; transition: color 0.3s; white-space: pre-line; }
+        #last-sequence { font-size: 2.2rem; letter-spacing: 8px; font-family: 'Consolas', monospace; color: #fff; display: block; min-height: 40px; }
         
-        /* Smart Stake Area */
-        #smart-stake { background: rgba(88, 166, 255, 0.1); border-radius: 6px; padding: 8px; margin-bottom: 15px; text-align: center; font-size: 0.8rem; color: var(--accent); border: 1px dashed var(--accent); display: none; }
+        .indicators { margin-top: 10px; display: flex; justify-content: space-around; }
+        #speed-meter, #noise-index { font-size: 0.75rem; font-weight: bold; }
+        #speed-meter { color: var(--gold); }
+        #noise-index { color: var(--noise); }
 
-        .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; position: relative; z-index: 1000; }
-        .feed-btn { padding: 15px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; opacity: 0.1; pointer-events: none; transition: 0.3s; font-size: 1.1rem; }
-        .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: scale(1.02); }
+        #op-status { font-weight: bold; font-size: 1.4rem; text-align: center; display: block; margin: 10px 0; color: #fff; }
+        #op-confidence { font-size: 0.8rem; color: #8b949e; text-align: center; display: block; min-height: 50px; border-bottom: 1px solid #30363d; padding-bottom: 10px; white-space: pre-line; }
+        
+        #smart-stake { background: rgba(88, 166, 255, 0.1); border-radius: 6px; padding: 10px; margin: 10px 0; text-align: center; font-size: 0.8rem; color: var(--accent); border: 1px dashed var(--accent); display: none; }
 
-        .session-log { background: rgba(0,0,0,0.4); border-radius: 8px; padding: 15px; border: 1px solid #30363d; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; position: relative; z-index: 1000; }
+        .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .feed-btn { padding: 18px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; opacity: 0.1; pointer-events: none; font-size: 1rem; }
+        .active-signal { opacity: 1 !important; pointer-events: auto !important; }
+
+        .session-log { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .stat-card { text-align: center; }
-        .stat-label { font-size: 0.65rem; color: #8b949e; text-transform: uppercase; display: block; }
-        .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+        .stat-label { font-size: 0.6rem; color: #8b949e; text-transform: uppercase; display: block; }
+        .stat-val { font-size: 1.2rem; font-weight: bold; color: var(--accent); }
 
-        .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #30363d; }
-        .touch-btn { padding: 12px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: 0.2s; position: relative; z-index: 1000; }
-        .touch-up { border-left: 4px solid var(--up); }
-        .touch-down { border-left: 4px solid var(--down); }
-        .touch-btn:active { transform: scale(0.95); background: #30363d; }
+        .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .touch-btn { padding: 15px; border-radius: 8px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        .touch-up { border-bottom: 4px solid var(--up); }
+        .touch-down { border-bottom: 4px solid var(--down); }
 
-        .btn-export { margin-top: 15px; width: 100%; padding: 10px; background: #21262d; color: var(--gold); border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-weight: bold; position: relative; z-index: 1000; }
-        .btn-reset { margin-top:10px; background:#da3633; color:white; border: none; }
+        .btn-export { margin-top: 15px; width: 100%; padding: 12px; background: #21262d; color: var(--gold); border: 1px solid #30363d; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-reset { margin-top: 8px; background: var(--down); color: white; border: none; }
 
-        /* ESTADOS DE TERMINAL (NO ELIMINADOS) */
-        .conf-high { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(241, 224, 90, 0.4); }
-        .term-up { background: #062a14 !important; border-color: var(--up) !important; }
-        .term-down { background: #320a0a !important; border-color: var(--down) !important; }
-        .term-noise { background: #2c2a1e !important; border-color: var(--noise) !important; }
+        /* ESTADOS VISUALES */
+        .conf-high { border-color: var(--gold) !important; box-shadow: 0 0 30px rgba(241, 224, 90, 0.3); }
+        .term-up { background: #062a14 !important; }
+        .term-down { background: #320a0a !important; }
+        .term-noise { background: #2c2a1e !important; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/ort.min.js"></script>
 </head>
-<body oncontextmenu="return false;">
+<body>
 
 <div id="mouse-overlay"></div>
 
@@ -118,26 +128,22 @@
 
     <div class="session-log">
         <div class="stat-card">
-            <span class="stat-label">Trades Guardados</span>
+            <span class="stat-label">Trades</span>
             <span id="stat-total" class="stat-val">0</span>
         </div>
         <div class="stat-card">
-            <span class="stat-label">Win Rate Global</span>
+            <span class="stat-label">Win Rate</span>
             <span id="stat-winrate" class="stat-val">0%</span>
         </div>
     </div>
 
     <div class="manual-controls">
-        <button class="touch-btn touch-up" onclick="injectManual('A')">
-            <span>⬆️ ALCISTA</span>
-        </button>
-        <button class="touch-btn touch-down" onclick="injectManual('B')">
-            <span>⬇️ BAJISTA</span>
-        </button>
+        <button class="touch-btn touch-up" onclick="injectManual('A')">⬆️ COMPRA</button>
+        <button class="touch-btn touch-down" onclick="injectManual('B')">⬇️ VENTA</button>
     </div>
 
-    <button class="btn-export" onclick="exportData()">EXPORTAR SESIÓN (CSV)</button>
-    <button class="btn-export btn-reset" onclick="resetAllData()">RESET TODOS LOS DATOS</button>
+    <button class="btn-export" onclick="exportData()">EXPORTAR CSV</button>
+    <button class="btn-export btn-reset" onclick="resetAllData()">RESET DATOS</button>
 </div>
 
 <script>
@@ -153,16 +159,13 @@
         if (ortSession) return;
         const conf = document.getElementById('op-confidence');
         try {
-            conf.innerText = "IA CARGANDO...";
             ort.env.wasm.numThreads = 1;
             const response = await fetch('./quantum_model.onnx?v=' + Date.now());
             const buffer = await response.arrayBuffer();
             ortSession = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
             conf.innerText = "IA: ONLINE";
-            conf.style.color = "#238636";
         } catch (e) {
             conf.innerText = "ERROR MODELO";
-            conf.style.color = "#da3633";
         }
     }
 
@@ -197,23 +200,19 @@
         if(!mouseEnabled) resetUI();
     }
 
-    // TOUCH ACUMULATIVO (NO BORRA NADA)
     function injectManual(side) {
         const now = Date.now();
         if (now - lastManualInjectionTime < 200) return;
         lastManualInjectionTime = now;
         if(navigator.vibrate) navigator.vibrate(40);
-        
         const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
         lastClickTime = now;
-        
         sequence.push({ val: side, diff: diff });
         if(sequence.length > 12) sequence.shift();
         analyze();
     }
 
     document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
-        e.preventDefault();
         const now = Date.now();
         const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
         lastClickTime = now;
@@ -234,14 +233,10 @@
         
         document.getElementById('last-sequence').innerText = seqStr || '---';
 
-        // Lógica de Ruido Original
         const oscillationCount = (seqStr.match(/AB|BA/g) || []).length;
         const noiseIndex = Math.min(100, Math.round((oscillationCount / Math.max(1, seqStr.length - 1)) * 120));
-        
-        const recentDiffs = sequence.slice(-5).map(s => s.diff);
-        const recentAvgSpeed = recentDiffs.reduce((acc, s) => acc + s, 0) / Math.max(1, recentDiffs.length);
+        const recentAvgSpeed = sequence.slice(-5).reduce((acc, s) => acc + s.diff, 0) / Math.max(1, sequence.slice(-5).length);
 
-        // Momentum Decay
         const lastDiff = sequence.length > 0 ? sequence[sequence.length-1].diff : 0;
         let decay = lastDiff > 1500 ? 0.6 : 1.0; 
 
@@ -270,20 +265,16 @@
                     iaProb = results.prob_win.data[0];
                 } catch (e) {}
             }
-            confElement.innerText = `Fuerza: ${strength.toFixed(1)} | IA: ${Math.round(iaProb * 100)}%`;
-            confElement.style.color = strength >= 7 ? '#f1e05a' : (strength > 3 ? '#58a6ff' : '#8b949e');
+            confElement.innerText = `Fuerza: ${strength.toFixed(1)} | Prob: ${Math.round(iaProb * 100)}%`;
             heatmap.style.width = (iaProb * 100) + "%";
             heatmap.style.background = type === "COMPRA" ? "var(--up)" : "var(--down)";
             stakeDiv.style.display = "block";
-            stakeDiv.innerHTML = iaProb > 0.8 ? "💰 <strong>SMART:</strong> 3-5% BALANCE" : (iaProb > 0.6 ? "💵 <strong>SMART:</strong> 1-2% BALANCE" : "⚠️ <strong>RIESGO ALTO</strong>");
+            stakeDiv.innerHTML = iaProb > 0.8 ? "💰 SMART STAKE: 5%" : (iaProb > 0.6 ? "💵 SMART STAKE: 2%" : "⚠️ RIESGO ALTO");
         } else {
-            heatmap.style.width = "0%";
-            stakeDiv.style.display = "none";
+            heatmap.style.width = "0%"; stakeDiv.style.display = "none";
             confElement.innerText = "ESPERANDO IMPULSO...";
-            confElement.style.color = '#8b949e';
         }
 
-        // Lógica de Señal y Ruido Alto (Original)
         if (type && (Date.now() - lastSignalTime > 4000) && strength > 3) { 
             lastSignalTime = Date.now();
             lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex, flex: flexMode };
@@ -291,7 +282,7 @@
             if (strength >= 7) terminal.classList.add('conf-high');
             document.getElementById('op-status').innerText = (strength >= 7 ? "🔥 " : "🚀 ") + type;
             document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
-        } else if (isChoppy && seqStr.length > 3) {
+        } else if (isChoppy) {
             terminal.className = 'terminal term-noise';
             document.getElementById('op-status').innerText = "RUIDO ALTO";
         }
@@ -301,8 +292,7 @@
         if (!lastSignalData) return;
         tradeHistory.push({ ...lastSignalData, result: isWin ? 1 : 0, timestamp: new Date().toLocaleTimeString() });
         localStorage.setItem('quantum_v19_trades', JSON.stringify(tradeHistory));
-        updateStats();
-        sequence = []; resetUI();
+        updateStats(); sequence = []; resetUI();
     }
 
     function updateStats() {
@@ -313,7 +303,7 @@
     }
 
     function resetAllData() {
-        if (confirm("¿Borrar historial?")) {
+        if (confirm("¿Borrar todo?")) {
             tradeHistory = []; localStorage.removeItem('quantum_v19_trades');
             updateStats(); resetUI();
         }
@@ -324,17 +314,16 @@
         document.getElementById('main-terminal').className = 'terminal';
         document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
         document.getElementById('heatmap-fill').style.width = "0%";
-        document.getElementById('smart-stake').style.display = "none";
         lastSignalData = null;
     }
 
     function exportData() {
         if (tradeHistory.length === 0) return alert("Sin datos.");
-        let csv = "Tipo,Riesgo,Fuerza,Ruido,Flex,Resultado,Hora\n";
-        tradeHistory.forEach(t => csv += `${t.type},${t.risk},${t.strength.toFixed(2)},${t.noise},${t.flex},${t.result},${t.timestamp}\n`);
+        let csv = "Tipo,Fuerza,IA_Prob,Resultado,Hora\n";
+        tradeHistory.forEach(t => csv += `${t.type},${t.strength.toFixed(2)},${t.iaProb},${t.result},${t.timestamp}\n`);
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
-        a.download = `quantum_v19_pro.csv`; a.click();
+        a.download = `quantum_v19.csv`; a.click();
     }
 </script>
 </body>
