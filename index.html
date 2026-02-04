@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <title>Quantum Alpha v18.6 | IA Stable + Local Load</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quantum Alpha v18.6 | IA Accumulative Touch</title>
     <style>
         :root {
             --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
@@ -12,10 +12,11 @@
         }
         body { background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         
+        /* Optimizaciones para móvil */
         * { 
             user-select: none; 
             box-sizing: border-box; 
-            touch-action: manipulation; 
+            touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -63,9 +64,11 @@
         .btn-export { margin-top: 15px; width: 100%; padding: 10px; background: #21262d; color: var(--gold); border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-weight: bold; position: relative; z-index: 1000; }
         .btn-reset { margin-top:10px; background:#da3633; color:white; border: none; }
 
+        /* Estados especiales */
         .conf-high { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(241, 224, 90, 0.4); }
         .term-up { background: #062a14 !important; border-color: var(--up) !important; }
         .term-down { background: #320a0a !important; border-color: var(--down) !important; }
+        .term-noise { background: #2c2a1e !important; border-color: var(--noise) !important; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/ort.min.js"></script>
 </head>
@@ -121,12 +124,12 @@
     <div class="manual-controls">
         <span class="manual-label">Modo Manual / Touch</span>
         <button class="touch-btn touch-up" onclick="injectManual('A')">
-            <span>+ ⬆️ ALCISTA</span>
-            <small style="font-size: 0.6rem; opacity: 0.7;">SUMAR COMPRA</small>
+            <span>⬆️ ALCISTA</span>
+            <small style="font-size: 0.6rem; opacity: 0.7;">FORZAR COMPRA</small>
         </button>
         <button class="touch-btn touch-down" onclick="injectManual('B')">
-            <span>+ ⬇️ BAJISTA</span>
-            <small style="font-size: 0.6rem; opacity: 0.7;">SUMAR VENTA</small>
+            <span>⬇️ BAJISTA</span>
+            <small style="font-size: 0.6rem; opacity: 0.7;">FORZAR VENTA</small>
         </button>
     </div>
 
@@ -143,23 +146,25 @@
     const minRachaByLevel = {1: 3, 2: 4, 3: 5};
     const noiseThresholdByLevel = {1: 65, 2: 55, 3: 50};
 
-    async function loadModel() {
-        if (ortSession) return;
-        const conf = document.getElementById('op-confidence');
-        try {
-            conf.innerText = "CARGANDO IA...";
-            ort.env.wasm.numThreads = 1;
-            ort.env.wasm.simd = false;
-            const response = await fetch('./quantum_model.onnx?v=' + Date.now());
-            const buffer = await response.arrayBuffer();
-            ortSession = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
-            conf.innerText = "IA: ONLINE";
-            conf.style.color = "#238636";
-        } catch (e) {
-            conf.innerText = "ERROR MODELO";
-            conf.style.color = "#da3633";
-        }
+async function loadModel() {
+    if (ortSession) return;
+    const conf = document.getElementById('op-confidence');
+    try {
+        conf.innerText = "VERIFICANDO INTEGRIDAD...";
+        ort.env.wasm.numThreads = 1;
+        ort.env.wasm.simd = false;
+        const response = await fetch('./quantum_model.onnx?v=' + Date.now());
+        if (!response.ok) throw new Error("No se pudo descargar el modelo");
+        const buffer = await response.arrayBuffer();
+        ortSession = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
+        conf.innerText = "IA: ONLINE";
+        conf.style.color = "#238636";
+    } catch (e) {
+        console.error("Error:", e);
+        conf.innerText = "ERROR DE CARGA";
+        conf.style.color = "#da3633";
     }
+}
 
     function setRisk(level, button) {
         riskLevel = level;
@@ -192,21 +197,18 @@
         if(!mouseEnabled) resetUI();
     }
 
-    // --- CORRECCIÓN CLAVE: INYECCIÓN ACUMULATIVA ---
+    // --- CORRECCIÓN TOUCH ACUMULATIVO ---
     function injectManual(side) {
         const now = Date.now();
-        if (now - lastManualInjectionTime < 250) return; // Anti-duplicado
+        if (now - lastManualInjectionTime < 250) return;
         lastManualInjectionTime = now;
-
-        // Vibración táctil si el móvil lo permite
-        if(navigator.vibrate) navigator.vibrate(40);
 
         const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
         lastClickTime = now;
 
-        // Sumamos a la secuencia en lugar de reiniciarla
+        // Ahora SUMA a la secuencia en lugar de borrarla
         sequence.push({ val: side, diff: diff });
-        if (sequence.length > 12) sequence.shift();
+        if(sequence.length > 12) sequence.shift();
         
         analyze();
     }
@@ -276,6 +278,9 @@
             if (strength >= 7) terminal.classList.add('conf-high');
             document.getElementById('op-status').innerText = (strength >= 7 ? "🔥 FUERTE " : "🚀 ") + type;
             document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
+        } else if (isChoppy) {
+            terminal.className = 'terminal term-noise';
+            document.getElementById('op-status').innerText = "RUIDO ALTO";
         }
     }
 
