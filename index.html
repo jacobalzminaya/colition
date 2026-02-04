@@ -139,32 +139,35 @@
     const noiseThresholdByLevel = {1: 65, 2: 55, 3: 50};
 
     // CARGA DE IA (VINCULADA LOCALMENTE SIN TOKEN)
-  async function loadModel() {
+async function loadModel() {
     if (ortSession) return;
     const conf = document.getElementById('op-confidence');
     
     try {
-        conf.innerText = "SINCRONIZANDO CON GITHUB...";
-        
-        // El 'fetch' asegura que bajamos el archivo real
-        const response = await fetch('./quantum_model.onnx');
-        if (!response.ok) throw new Error("No se encontró el archivo .onnx");
-        
-        const arrayBuffer = await response.arrayBuffer();
-        
-        // Configuramos el motor ONNX
-        ort.env.wasm.numThreads = 1;
-        ort.env.wasm.simd = false;
+        conf.innerText = "INICIALIZANDO NÚCLEO...";
 
-        ortSession = await ort.InferenceSession.create(arrayBuffer);
-        
+        // FORZAR RUTA DE BINARIOS (Esto evita el error 8539888)
+        ort.env.wasm.proxy = false;
+        ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/';
+
+        const response = await fetch('./quantum_model.onnx?v=' + Date.now());
+        if (!response.ok) throw new Error("Archivo no encontrado");
+        const arrayBuffer = await response.arrayBuffer();
+
+        // Crear la sesión con configuración de compatibilidad total
+        ortSession = await ort.InferenceSession.create(arrayBuffer, {
+            executionProviders: ['wasm'],
+            graphOptimizationLevel: 'all'
+        });
+
         conf.innerText = "IA: ONLINE";
         conf.style.color = "#238636";
-        console.log("Sistema cargado exitosamente");
+        console.log("✅ IA Cargada con éxito");
     } catch (e) {
-        console.error(e);
-        conf.innerText = "ERROR: " + e.message;
-        conf.style.color = "#da3633";
+        console.error("Error Crítico:", e);
+        conf.innerText = "REINTENTANDO CONEXIÓN...";
+        // Reintento automático en 2 segundos si falla
+        setTimeout(loadModel, 2000);
     }
 }
 
@@ -316,5 +319,6 @@
 </script>
 </body>
 </html>
+
 
 
