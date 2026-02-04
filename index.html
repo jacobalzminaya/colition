@@ -207,68 +207,77 @@
     });
 
     async function analyze() {
-        const seqStr = sequence.map(s => s.val).join('');
-        const terminal = document.getElementById('main-terminal');
-        const confElement = document.getElementById('op-confidence');
-        document.getElementById('last-sequence').innerText = seqStr || '---';
+    const seqStr = sequence.map(s => s.val).join('');
+    const terminal = document.getElementById('main-terminal');
+    const confElement = document.getElementById('op-confidence');
+    document.getElementById('last-sequence').innerText = seqStr || '---';
 
-        const oscillationCount = (seqStr.match(/AB|BA/g) || []).length;
-        const noiseIndex = Math.min(100, Math.round((oscillationCount / Math.max(1, seqStr.length - 1)) * 120));
-        const recentAvgSpeed = sequence.slice(-5).reduce((acc, s) => acc + s.diff, 0) / Math.max(1, sequence.slice(-5).length);
+    const oscillationCount = (seqStr.match(/AB|BA/g) || []).length;
+    const noiseIndex = Math.min(100, Math.round((oscillationCount / Math.max(1, seqStr.length - 1)) * 120));
+    const recentAvgSpeed = sequence.slice(-5).reduce((acc, s) => acc + s.diff, 0) / Math.max(1, sequence.slice(-5).length);
 
-        document.getElementById('speed-meter').innerText = `MOMENTUM: ${Math.round(recentAvgSpeed)}ms`;
-        document.getElementById('noise-index').innerText = `RUIDO: ${noiseIndex}%`;
+    document.getElementById('speed-meter').innerText = `MOMENTUM: ${Math.round(recentAvgSpeed)}ms`;
+    document.getElementById('noise-index').innerText = `RUIDO: ${noiseIndex}%`;
 
-        let noiseMax = noiseThresholdByLevel[riskLevel] + (flexMode ? 15 : 0);
-        const isChoppy = noiseIndex > noiseMax;
-        const minR = minRachaByLevel[riskLevel];
-        
-        let type = null, strength = 0;
-        if (new RegExp('A{' + minR + ',}').test(seqStr) && !isChoppy) {
-            type = "COMPRA";
-            strength = (seqStr.slice(-6).match(/A/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1);
-        } else if (new RegExp('B{' + minR + ',}').test(seqStr) && !isChoppy) {
-            type = "VENTA";
-            strength = (seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1);
-        }
+    let noiseMax = noiseThresholdByLevel[riskLevel] + (flexMode ? 15 : 0);
+    const isChoppy = noiseIndex > noiseMax;
+    const minR = minRachaByLevel[riskLevel];
+    
+    let type = null, strength = 0;
+    if (new RegExp('A{' + minR + ',}').test(seqStr) && !isChoppy) {
+        type = "COMPRA";
+        strength = (seqStr.slice(-6).match(/A/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1);
+    } else if (new RegExp('B{' + minR + ',}').test(seqStr) && !isChoppy) {
+        type = "VENTA";
+        strength = (seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1);
+    }
 
-        if (type && noiseIndex > 30) strength = Math.max(0, strength - (noiseIndex / 20));
+    if (type && noiseIndex > 30) strength = Math.max(0, strength - (noiseIndex / 20));
 
-        let confidenceMsg = "ESPERANDO IMPULSO...", finalColor = '#8b949e';
-        if (type) {
-            confidenceMsg = `Fuerza: ${strength.toFixed(1)} | Ruido: ${noiseIndex}%`;
-            if (strength >= 7) { confidenceMsg = "🔥 " + confidenceMsg; finalColor = '#f1e05a'; }
-            else if (strength > 3) { confidenceMsg = "🟢 " + confidenceMsg; finalColor = '#58a6ff'; }
-            else { confidenceMsg = "⚠️ " + confidenceMsg; finalColor = '#d29922'; }
+    let confidenceMsg = "ESPERANDO IMPULSO...", finalColor = '#8b949e';
+    if (type) {
+        confidenceMsg = `Fuerza: ${strength.toFixed(1)} | Ruido: ${noiseIndex}%`;
+        if (strength >= 7) { confidenceMsg = "🔥 " + confidenceMsg; finalColor = '#f1e05a'; }
+        else if (strength > 3) { confidenceMsg = "🟢 " + confidenceMsg; finalColor = '#58a6ff'; }
+        else { confidenceMsg = "⚠️ " + confidenceMsg; finalColor = '#d29922'; }
 
-            // PREDICCIÓN IA
-            if (ortSession) {
-                try {
-                    const input = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode ? 1 : 0]), [1, 4]);
-                    const results = await ortSession.run({ input });
-                    const prob = results.output.data[0];
-                    confidenceMsg += `\nIA PREDICT: ${Math.round(prob * 100)}% Win Prob`;
-                } catch (e) { console.error(e); }
+        // === PREDICCIÓN IA (Sincronizada con tu exportación de PyTorch) ===
+        if (ortSession) {
+            try {
+                // Usamos 'input' porque así lo nombraste en dummy_input
+                const inputTensor = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode ? 1 : 0]), [1, 4]);
+                
+                // Pasamos el objeto con la clave 'input'
+                const results = await ortSession.run({ input: inputTensor });
+                
+                // Extraemos la probabilidad usando 'prob_win' (tu output_name)
+                const prob = results.prob_win.data[0];
+                
+                confidenceMsg += `\nIA PREDICT: ${Math.round(prob * 100)}% Win Prob`;
+            } catch (e) { 
+                console.error("Error de Inferencia:", e);
+                confidenceMsg += `\nIA: Error de Formato`; 
             }
         }
-
-        confElement.innerText = confidenceMsg;
-        confElement.style.color = finalColor;
-
-        if (type && (Date.now() - lastSignalTime > 5000) && strength > 3) { 
-            lastSignalTime = Date.now(); signalBirthTime = Date.now();
-            lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex, flex: flexMode };
-            terminal.className = 'terminal ' + (type === "COMPRA" ? 'term-up' : 'term-down');
-            if (strength >= 7) terminal.classList.add('conf-high');
-            document.getElementById('op-status').innerText = (strength >= 7 ? "🔥 ALTA PRECISIÓN " : "🚀 ") + type;
-            document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
-        } else if (isChoppy && sequence.length > 4) {
-            terminal.className = 'terminal term-noise';
-            document.getElementById('op-status').innerText = "MERCADO RUIDOSO";
-            confElement.innerText = `Evita operar - Ruido ${noiseIndex}%`;
-            confElement.style.color = '#8b949e';
-        }
     }
+
+    confElement.innerText = confidenceMsg;
+    confElement.style.color = finalColor;
+
+    if (type && (Date.now() - lastSignalTime > 5000) && strength > 3) { 
+        lastSignalTime = Date.now(); signalBirthTime = Date.now();
+        lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex, flex: flexMode };
+        terminal.className = 'terminal ' + (type === "COMPRA" ? 'term-up' : 'term-down');
+        if (strength >= 7) terminal.classList.add('conf-high');
+        document.getElementById('op-status').innerText = (strength >= 7 ? "🔥 ALTA PRECISIÓN " : "🚀 ") + type;
+        document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
+    } else if (isChoppy && sequence.length > 4) {
+        terminal.className = 'terminal term-noise';
+        document.getElementById('op-status').innerText = "MERCADO RUIDOSO";
+        confElement.innerText = `Evita operar - Ruido ${noiseIndex}%`;
+        confElement.style.color = '#8b949e';
+    }
+}
 
     function logResult(isWin) {
         if (!lastSignalData) return;
@@ -310,3 +319,4 @@
 </script>
 </body>
 </html>
+
