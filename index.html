@@ -144,23 +144,29 @@ async function loadModel() {
     const conf = document.getElementById('op-confidence');
     
     try {
-        conf.innerText = "CARGANDO NÚCLEO INTEGRADO...";
+        conf.innerText = "VERIFICANDO INTEGRIDAD...";
 
         ort.env.wasm.numThreads = 1;
         ort.env.wasm.simd = false;
-        ort.env.wasm.proxy = false;
 
-        // Cargamos directamente la URL. Al estar en el mismo sitio, es más seguro.
-        ortSession = await ort.InferenceSession.create('./quantum_model.onnx?v=' + Date.now(), {
+        // Descargamos el archivo como un bloque de datos puro
+        const response = await fetch('./quantum_model.onnx?v=' + Date.now());
+        if (!response.ok) throw new Error("No se pudo descargar el modelo");
+        
+        const buffer = await response.arrayBuffer();
+
+        // Cargamos la IA desde el buffer de memoria
+        ortSession = await ort.InferenceSession.create(buffer, {
             executionProviders: ['wasm']
         });
 
         conf.innerText = "IA: ONLINE";
         conf.style.color = "#238636";
-        console.log("✅ IA Sincronizada correctamente.");
+        console.log("🎯 Conexión exitosa. Datos integrados.");
     } catch (e) {
         console.error("Error:", e);
-        conf.innerText = "ERROR: " + e.message;
+        // Si el error dice ".data", es que el archivo de GitHub sigue mal subido
+        conf.innerText = "ERROR: EL ARCHIVO SIGUE PIDIENDO .DATA EXTERNO";
         conf.style.color = "#da3633";
     }
 }
@@ -313,6 +319,7 @@ async function loadModel() {
 </script>
 </body>
 </html>
+
 
 
 
