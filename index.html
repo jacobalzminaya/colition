@@ -144,29 +144,32 @@ async function loadModel() {
     const conf = document.getElementById('op-confidence');
     
     try {
-        conf.innerText = "ESTABLECIENDO CONEXIÓN SEGURA...";
+        conf.innerText = "SINCRO NATIVA ACTIVADA...";
 
-        // PARCHES PARA EVITAR BLOQUEO DE NAVEGADOR
-        ort.env.wasm.numThreads = 1;
+        // --- PARCHES DE SEGURIDAD PARA GITHUB PAGES ---
+        // Desactivamos el proxy y los hilos para evitar bloqueos del navegador
+        ort.env.wasm.numThreads = 1; 
         ort.env.wasm.simd = false;
-        ort.env.wasm.proxy = true; // Esto ayuda con el bloqueo de "Tracking Prevention"
+        ort.env.wasm.proxy = false; // CAMBIADO A FALSE PARA EVITAR EL ERROR DE PROMISE
 
         const response = await fetch('./quantum_model.onnx?v=' + Date.now());
-        if (!response.ok) throw new Error("GitHub no entregó el archivo");
+        if (!response.ok) throw new Error("Archivo no accesible");
         const arrayBuffer = await response.arrayBuffer();
 
-        // Carga el modelo
+        // Carga simplificada
         ortSession = await ort.InferenceSession.create(arrayBuffer, {
             executionProviders: ['wasm']
         });
 
         conf.innerText = "IA: ONLINE";
         conf.style.color = "#238636";
-        console.log("🚀 Sistema sincronizado y operando.");
+        console.log("✅ Sistema vinculado en hilo principal.");
     } catch (e) {
-        console.error("Error:", e);
-        conf.innerText = "ERROR DE COMPATIBILIDAD (REVISA CONSOLA)";
+        console.error("Fallo de inicialización:", e);
+        conf.innerText = "ERROR DE VÍNCULO (REINTENTANDO)";
         conf.style.color = "#da3633";
+        // Reintento suave
+        setTimeout(loadModel, 3000);
     }
 }
 
@@ -318,6 +321,7 @@ async function loadModel() {
 </script>
 </body>
 </html>
+
 
 
 
