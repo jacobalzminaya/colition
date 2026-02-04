@@ -46,7 +46,6 @@
         .stat-label { font-size: 0.65rem; color: #8b949e; text-transform: uppercase; display: block; }
         .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
 
-        /* CONTROLES MANUALES TOUCH */
         .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #30363d; }
         .touch-btn { padding: 12px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: 0.2s; position: relative; z-index: 1000; }
         .touch-up { border-left: 4px solid var(--up); }
@@ -62,7 +61,8 @@
         .term-down { background: #320a0a !important; border-color: var(--down) !important; }
         .term-noise { background: #2c2a1e !important; border-color: var(--noise) !important; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
+    <!-- Versión más reciente y estable -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js"></script>
 </head>
 <body oncontextmenu="return false;">
 
@@ -130,6 +130,13 @@
 </div>
 
 <script>
+    // CONFIGURACIÓN GLOBAL DE ONNX ANTES DE CUALQUIER USO
+    if (typeof ort !== 'undefined') {
+        ort.env.wasm.numThreads = 1;           // Evita problemas de multi-threading
+        ort.env.wasm.simd = true;              // SIMD activado (puedes poner false si falla)
+        ort.env.logLevel = 'verbose';          // Más logs para depurar
+    }
+
     let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
     let lastClickTime = 0, lastSignalTime = 0, signalBirthTime = 0;
     let currentInterval = 10, riskLevel = 2, lastSignalData = null;
@@ -150,10 +157,11 @@
             return;
         }
 
-        if (typeof ort === 'undefined' || typeof ort.InferenceSession === 'undefined') {
-            console.warn("ort aún no está cargado. Esperando 1.5 segundos...");
-            document.getElementById('op-confidence').innerText = "Esperando librería ONNX...\n(Recarga si no avanza en 5s)";
-            setTimeout(loadModel, 1500); // reintenta automáticamente
+        // Verificar si ort está disponible
+        if (typeof ort === 'undefined' || typeof ort.InferenceSession !== 'function') {
+            console.warn("Librería ONNX aún no cargada. Reintentando en 2 segundos...");
+            document.getElementById('op-confidence').innerText = "Esperando librería ONNX... (puede tardar unos segundos)";
+            setTimeout(loadModel, 2000);
             return;
         }
 
@@ -163,15 +171,17 @@
         document.getElementById('op-confidence').innerText = `Cargando modelo IA...\nDesde: het322.onnx`;
 
         try {
-            ortSession = await ort.InferenceSession.create(modelUrl);
+            ortSession = await ort.InferenceSession.create(modelUrl, {
+                executionProviders: ['wasm'],  // Forzamos WASM (evita WebGL si causa problemas)
+                enableCpuMemArena: true
+            });
             console.log("¡MODELO CARGADO EXITOSAMENTE!");
-            document.getElementById('op-confidence').innerText = 
-                document.getElementById('op-confidence').innerText.replace("Cargando modelo IA...", "Modelo IA cargado OK ✓");
+            document.getElementById('op-confidence').innerText += "\nModelo IA cargado OK ✓";
             document.getElementById('op-status').innerText = "RADAR + IA ACTIVO";
         } catch (err) {
             console.error("FALLO AL CARGAR MODELO:", err);
-            console.error("Mensaje:", err.message || "Sin mensaje detallado");
-            console.error("Stack:", err.stack || "Sin stack");
+            console.error("Mensaje:", err.message);
+            console.error("Stack:", err.stack);
             document.getElementById('op-confidence').innerText = 
                 `ERROR AL CARGAR MODELO IA\n${err.message || "Error desconocido"}\nRevisa consola (F12)`;
             document.getElementById('op-status').innerText = "ERROR: MODELO IA NO CARGADO";
@@ -219,7 +229,6 @@
         }
     }
 
-    // INYECCIÓN MANUAL TOUCH
     function injectManual(side) {
         sequence = [];
         for(let i=0; i<5; i++) {
@@ -276,7 +285,6 @@
             else if (strength > 3) { confidenceMsg = "🟢 " + confidenceMsg; finalColor = '#58a6ff'; }
             else { confidenceMsg = "⚠️ " + confidenceMsg; finalColor = '#d29922'; }
 
-            // === PREDICCIÓN IA ===
             if (ortSession) {
                 try {
                     const inputTensor = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode ? 1 : 0]), [1, 4]);
