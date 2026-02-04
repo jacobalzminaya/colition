@@ -95,7 +95,7 @@
     </div>
 
     <span id="op-status">IDLE</span>
-    <div id="op-confidence">ESPERANDO IMPULSO... (Modelo IA: NO CARGADO)</div>
+    <div id="op-confidence">ESPERANDO IMPULSO... (Modelo IA: NO CARGADO AÚN)</div>
 
     <div class="feedback-container">
         <button id="winBtn" class="feed-btn" style="background:var(--up)" onclick="logResult(true)">WIN</button>
@@ -144,30 +144,40 @@
         setTimeout(updateStats, 100);
     }
 
-   async function loadModel() {
-    if (ortSession) {
-        console.log("Modelo ya estaba cargado, saltando...");
-        return;
+    async function loadModel() {
+        if (ortSession) {
+            console.log("Modelo ya estaba cargado, saltando...");
+            return;
+        }
+
+        if (typeof ort === 'undefined' || typeof ort.InferenceSession === 'undefined') {
+            console.warn("ort aún no está cargado. Esperando 1.5 segundos...");
+            document.getElementById('op-confidence').innerText = "Esperando librería ONNX...\n(Recarga si no avanza en 5s)";
+            setTimeout(loadModel, 1500); // reintenta automáticamente
+            return;
+        }
+
+        const modelUrl = 'https://files.catbox.moe/het322.onnx';
+
+        console.log("Intentando cargar el modelo desde:", modelUrl);
+        document.getElementById('op-confidence').innerText = `Cargando modelo IA...\nDesde: het322.onnx`;
+
+        try {
+            ortSession = await ort.InferenceSession.create(modelUrl);
+            console.log("¡MODELO CARGADO EXITOSAMENTE!");
+            document.getElementById('op-confidence').innerText = 
+                document.getElementById('op-confidence').innerText.replace("Cargando modelo IA...", "Modelo IA cargado OK ✓");
+            document.getElementById('op-status').innerText = "RADAR + IA ACTIVO";
+        } catch (err) {
+            console.error("FALLO AL CARGAR MODELO:", err);
+            console.error("Mensaje:", err.message || "Sin mensaje detallado");
+            console.error("Stack:", err.stack || "Sin stack");
+            document.getElementById('op-confidence').innerText = 
+                `ERROR AL CARGAR MODELO IA\n${err.message || "Error desconocido"}\nRevisa consola (F12)`;
+            document.getElementById('op-status').innerText = "ERROR: MODELO IA NO CARGADO";
+        }
     }
 
-    const modelUrl = 'https://files.catbox.moe/het322.onnx';  // ← ¡Este es el bueno!
-
-    console.log("Intentando cargar el modelo desde:", modelUrl);
-    document.getElementById('op-confidence').innerText = `Cargando modelo IA...\nDesde: ${modelUrl.split('/').pop()}`;
-
-    try {
-        ortSession = await ort.InferenceSession.create(modelUrl);
-        console.log("¡MODELO CARGADO EXITOSAMENTE!");
-        document.getElementById('op-confidence').innerText += "\nModelo IA cargado OK ✓";
-        document.getElementById('op-status').innerText = "RADAR + IA ACTIVO";
-    } catch (err) {
-        console.error("FALLO AL CARGAR MODELO:", err);
-        console.error("Mensaje:", err.message);
-        console.error("Stack:", err.stack);
-        document.getElementById('op-confidence').innerText = `ERROR: ${err.message || "Ver consola"}\nLink: ${modelUrl}`;
-        document.getElementById('op-status').innerText = "ERROR EN IA";
-    }
-}
     function setRisk(level, button) {
         riskLevel = level;
         document.querySelectorAll('.risk-selector .btn:not(.btn-flex)').forEach(b => b.classList.remove('active'));
@@ -266,7 +276,7 @@
             else if (strength > 3) { confidenceMsg = "🟢 " + confidenceMsg; finalColor = '#58a6ff'; }
             else { confidenceMsg = "⚠️ " + confidenceMsg; finalColor = '#d29922'; }
 
-            // === PREDICCIÓN IA (Sincronizada con tu exportación de PyTorch) ===
+            // === PREDICCIÓN IA ===
             if (ortSession) {
                 try {
                     const inputTensor = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode ? 1 : 0]), [1, 4]);
@@ -340,4 +350,3 @@
 </script>
 </body>
 </html>
-
