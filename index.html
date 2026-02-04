@@ -129,12 +129,11 @@
 </div>
 
 <script>
-    // CONFIGURACIÓN GLOBAL DE ONNX - MUY IMPORTANTE PARA TU MODELO
-    ort.env.wasm.numThreads = 1;           // Evita problemas de threads y cross-origin
-    ort.env.logLevel = 'verbose';          // Más detalles en consola para depurar
-    ort.env.externalData = {
-        baseUrl: 'https://files.catbox.moe/'   // ← Aquí están tus dos archivos
-    };
+    // CONFIGURACIÓN GLOBAL DE ONNX
+    ort.env.wasm.numThreads = 1;
+    ort.env.logLevel = 'verbose';
+
+    // NO necesitas externalData porque ahora es un solo archivo
 
     let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
     let lastClickTime = 0, lastSignalTime = 0, signalBirthTime = 0;
@@ -155,7 +154,6 @@
             return;
         }
 
-        // Verificar que ort esté disponible
         if (typeof ort === 'undefined' || typeof ort.InferenceSession !== 'function') {
             console.warn("Librería ONNX no lista aún. Reintentando en 2 segundos...");
             document.getElementById('op-confidence').innerText = "Esperando librería ONNX...";
@@ -163,10 +161,10 @@
             return;
         }
 
-        const modelUrl = 'https://files.catbox.moe/het322.onnx';
+const modelUrl = 'https://files.catbox.moe/nv9qwc.onnx';
 
-        console.log("Intentando cargar modelo + datos externos desde:", modelUrl);
-        document.getElementById('op-confidence').innerText = `Cargando modelo IA (con datos externos)...`;
+        console.log("Intentando cargar el modelo (single file):", modelUrl);
+        document.getElementById('op-confidence').innerText = `Cargando modelo IA (single file)...`;
 
         try {
             ortSession = await ort.InferenceSession.create(modelUrl);
@@ -179,9 +177,7 @@
             console.error("Stack:", err.stack);
             document.getElementById('op-confidence').innerText = 
                 `ERROR AL CARGAR MODELO:\n${err.message || "Ver consola F12"}\n` +
-                `Verifica que ambos archivos estén accesibles:\n` +
-                `- https://files.catbox.moe/het322.onnx\n` +
-                `- https://files.catbox.moe/3f9kn4.data`;
+                `Link usado: ${modelUrl}\nAsegúrate que sea el nuevo archivo single (sin .data)`;
             document.getElementById('op-status').innerText = "ERROR EN IA";
         }
     }
