@@ -61,7 +61,6 @@
         .term-down { background: #320a0a !important; border-color: var(--down) !important; }
         .term-noise { background: #2c2a1e !important; border-color: var(--noise) !important; }
     </style>
-    <!-- Versión más reciente y estable -->
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js"></script>
 </head>
 <body oncontextmenu="return false;">
@@ -130,12 +129,12 @@
 </div>
 
 <script>
-    // CONFIGURACIÓN GLOBAL DE ONNX ANTES DE CUALQUIER USO
-    if (typeof ort !== 'undefined') {
-        ort.env.wasm.numThreads = 1;           // Evita problemas de multi-threading
-        ort.env.wasm.simd = true;              // SIMD activado (puedes poner false si falla)
-        ort.env.logLevel = 'verbose';          // Más logs para depurar
-    }
+    // CONFIGURACIÓN GLOBAL DE ONNX - MUY IMPORTANTE PARA TU MODELO
+    ort.env.wasm.numThreads = 1;           // Evita problemas de threads y cross-origin
+    ort.env.logLevel = 'verbose';          // Más detalles en consola para depurar
+    ort.env.externalData = {
+        baseUrl: 'https://files.catbox.moe/'   // ← Aquí están tus dos archivos
+    };
 
     let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
     let lastClickTime = 0, lastSignalTime = 0, signalBirthTime = 0;
@@ -145,7 +144,6 @@
     const minRachaByLevel = {1: 3, 2: 4, 3: 5};
     const noiseThresholdByLevel = {1: 65, 2: 55, 3: 50};
 
-    // PERSISTENCIA
     if (localStorage.getItem('quantum_v18_trades')) {
         tradeHistory = JSON.parse(localStorage.getItem('quantum_v18_trades'));
         setTimeout(updateStats, 100);
@@ -157,34 +155,34 @@
             return;
         }
 
-        // Verificar si ort está disponible
+        // Verificar que ort esté disponible
         if (typeof ort === 'undefined' || typeof ort.InferenceSession !== 'function') {
-            console.warn("Librería ONNX aún no cargada. Reintentando en 2 segundos...");
-            document.getElementById('op-confidence').innerText = "Esperando librería ONNX... (puede tardar unos segundos)";
+            console.warn("Librería ONNX no lista aún. Reintentando en 2 segundos...");
+            document.getElementById('op-confidence').innerText = "Esperando librería ONNX...";
             setTimeout(loadModel, 2000);
             return;
         }
 
         const modelUrl = 'https://files.catbox.moe/het322.onnx';
 
-        console.log("Intentando cargar el modelo desde:", modelUrl);
-        document.getElementById('op-confidence').innerText = `Cargando modelo IA...\nDesde: het322.onnx`;
+        console.log("Intentando cargar modelo + datos externos desde:", modelUrl);
+        document.getElementById('op-confidence').innerText = `Cargando modelo IA (con datos externos)...`;
 
         try {
-            ortSession = await ort.InferenceSession.create(modelUrl, {
-                executionProviders: ['wasm'],  // Forzamos WASM (evita WebGL si causa problemas)
-                enableCpuMemArena: true
-            });
+            ortSession = await ort.InferenceSession.create(modelUrl);
             console.log("¡MODELO CARGADO EXITOSAMENTE!");
-            document.getElementById('op-confidence').innerText += "\nModelo IA cargado OK ✓";
+            document.getElementById('op-confidence').innerText += "\nModelo IA cargado OK ✓ Listo para predicciones";
             document.getElementById('op-status').innerText = "RADAR + IA ACTIVO";
         } catch (err) {
-            console.error("FALLO AL CARGAR MODELO:", err);
+            console.error("ERROR AL CARGAR MODELO:", err);
             console.error("Mensaje:", err.message);
             console.error("Stack:", err.stack);
             document.getElementById('op-confidence').innerText = 
-                `ERROR AL CARGAR MODELO IA\n${err.message || "Error desconocido"}\nRevisa consola (F12)`;
-            document.getElementById('op-status').innerText = "ERROR: MODELO IA NO CARGADO";
+                `ERROR AL CARGAR MODELO:\n${err.message || "Ver consola F12"}\n` +
+                `Verifica que ambos archivos estén accesibles:\n` +
+                `- https://files.catbox.moe/het322.onnx\n` +
+                `- https://files.catbox.moe/3f9kn4.data`;
+            document.getElementById('op-status').innerText = "ERROR EN IA";
         }
     }
 
