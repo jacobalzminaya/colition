@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quantum Alpha PRO v19.7 | Ultra High Alert</title>
+    <title>Quantum Alpha PRO v19.7 | Ultra Alert Fix</title>
     <style>
         :root {
             --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
@@ -13,33 +13,33 @@
         body { 
             background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; 
             display: flex; justify-content: center; align-items: center; min-height: 100vh; 
-            margin: 0; padding: 10px; overflow: hidden;
+            margin: 0; padding: 10px; overflow: hidden; transition: background 0.3s ease;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
         * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
         .terminal { 
             background: var(--panel-bg); width: 100%; max-width: 480px; border: 1px solid var(--neutral); border-radius: 16px; padding: 20px; 
-            box-shadow: 0 25px 50px rgba(0,0,0,0.9); position: relative; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.9); position: relative; transition: all 0.2s ease;
         }
 
-        /* --- ANIMACIONES ESCANDALOZAS --- */
-        @keyframes pulse-up {
-            0% { box-shadow: 0 0 0px var(--up); transform: scale(1); }
-            50% { box-shadow: 0 0 60px var(--up); transform: scale(1.02); }
-            100% { box-shadow: 0 0 0px var(--up); transform: scale(1); }
+        /* --- ANIMACIONES DE ALTO IMPACTO --- */
+        @keyframes pulse-up-extreme {
+            0% { box-shadow: 0 0 0px var(--up); transform: scale(1); background: #062a14; }
+            50% { box-shadow: 0 0 80px var(--up); transform: scale(1.03); background: #0c5228; }
+            100% { box-shadow: 0 0 0px var(--up); transform: scale(1); background: #062a14; }
         }
-        @keyframes pulse-down {
-            0% { box-shadow: 0 0 0px var(--down); transform: scale(1); }
-            50% { box-shadow: 0 0 60px var(--down); transform: scale(1.02); }
-            100% { box-shadow: 0 0 0px var(--down); transform: scale(1); }
+        @keyframes pulse-down-extreme {
+            0% { box-shadow: 0 0 0px var(--down); transform: scale(1); background: #320a0a; }
+            50% { box-shadow: 0 0 80px var(--down); transform: scale(1.03); background: #611313; }
+            100% { box-shadow: 0 0 0px var(--down); transform: scale(1); background: #320a0a; }
         }
 
-        .alert-buy { animation: pulse-up 0.5s infinite; border: 4px solid var(--up) !important; background: #062a14 !important; }
-        .alert-sell { animation: pulse-down 0.5s infinite; border: 4px solid var(--down) !important; background: #320a0a !important; }
+        .alert-buy { animation: pulse-up-extreme 0.4s infinite !important; border: 5px solid #3fb950 !important; }
+        .alert-sell { animation: pulse-down-extreme 0.4s infinite !important; border: 5px solid #f85149 !important; }
 
         #heatmap-bar { width: 100%; height: 5px; background: var(--neutral); margin-bottom: 20px; border-radius: 2px; overflow: hidden; }
-        #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.6s ease; }
+        #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.4s ease; }
 
         .selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .time-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
@@ -50,56 +50,38 @@
             padding: 10px 2px; border-radius: 6px; cursor: pointer; 
             font-size: 0.7rem; text-align: center; font-weight: bold; transition: 0.2s;
         }
-        .btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 10px rgba(88, 166, 255, 0.3); }
+        .btn.active { background: var(--accent); color: white; border-color: var(--accent); }
         .btn-flex { border-color: var(--flex-on); color: var(--flex-on); }
         .btn-flex.active { background: var(--flex-on) !important; color: white !important; }
 
-        #mouseBtn { width:100%; padding:14px; margin-bottom:15px; border-radius:10px; cursor:pointer; background:#21262d; color:var(--gold); font-weight:800; border:1px solid var(--gold); letter-spacing: 1px; }
+        #mouseBtn { width:100%; padding:14px; margin-bottom:15px; border-radius:10px; cursor:pointer; background:#21262d; color:var(--gold); font-weight:800; border:1px solid var(--gold); }
         #mouse-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; cursor: crosshair; background: rgba(0,0,0,0.01); }
 
-        .monitor { background: #010409; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 15px; border: 1px solid #30363d; position: relative; }
-        #last-sequence { font-size: 2.6rem; letter-spacing: 12px; font-family: 'Consolas', monospace; color: #fff; display: block; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
+        .monitor { background: #010409; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 15px; border: 1px solid #30363d; }
+        #last-sequence { font-size: 2.6rem; letter-spacing: 12px; font-family: 'Consolas', monospace; color: #fff; }
         
-        .indicators { margin-top: 15px; display: flex; justify-content: space-around; border-top: 1px solid #161b22; padding-top: 10px; }
-        #speed-meter, #noise-index { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-        #speed-meter { color: var(--gold); }
-        #noise-index { color: var(--noise); }
+        #op-status { font-weight: 900; font-size: 2.5rem; text-align: center; display: block; margin: 10px 0; color: #fff; }
+        #op-confidence { font-size: 0.9rem; font-weight: bold; text-align: center; display: block; min-height: 40px; }
 
-        #op-status { font-weight: 900; font-size: 2.2rem; text-align: center; display: block; margin: 15px 0 5px 0; color: #fff; text-transform: uppercase; }
-        #op-confidence { font-size: 0.85rem; font-weight: bold; color: #8b949e; text-align: center; display: block; min-height: 45px; margin-bottom: 10px; }
-        
-        /* Gestión de Capital Visual Extrema */
         #smart-stake { 
-            border-radius: 8px; padding: 14px; margin-bottom: 15px; text-align: center; 
-            font-size: 1rem; font-weight: 900; display: none; text-transform: uppercase;
+            border-radius: 8px; padding: 15px; margin-bottom: 15px; text-align: center; 
+            font-size: 1.1rem; font-weight: 900; display: none;
         }
-        .stake-buy { background: var(--up); color: white; box-shadow: 0 0 20px var(--up); }
-        .stake-sell { background: var(--down); color: white; box-shadow: 0 0 20px var(--down); }
-        .stake-low { background: rgba(88, 166, 255, 0.05); color: var(--accent); border: 1px dashed var(--accent); }
+        .stake-buy { background: var(--up); color: white; border: 2px solid #fff; }
+        .stake-sell { background: var(--down); color: white; border: 2px solid #fff; }
+        .stake-low { background: rgba(88, 166, 255, 0.1); color: var(--accent); border: 1px dashed var(--accent); }
 
         .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .feed-btn { padding: 16px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; opacity: 0.1; pointer-events: none; transition: 0.4s; font-size: 1rem; letter-spacing: 1px; }
-        .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        .feed-btn { padding: 18px; border: none; border-radius: 10px; color: white; font-weight: bold; opacity: 0.1; pointer-events: none; transition: 0.3s; font-size: 1.1rem; }
+        .active-signal { opacity: 1 !important; pointer-events: auto !important; }
 
         .session-log { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; display: flex; justify-content: space-around; border: 1px solid #30363d; }
-        .stat-card { text-align: center; }
-        .stat-label { font-size: 0.6rem; color: #8b949e; text-transform: uppercase; display: block; margin-bottom: 4px; }
         .stat-val { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
 
-        .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .touch-btn { padding: 16px; border-radius: 10px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .touch-up { border-bottom: 4px solid var(--up); }
-        .touch-down { border-bottom: 4px solid var(--down); }
-        .touch-btn:active { transform: scale(0.96); }
-
-        .admin-btns { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 15px; }
-        .btn-action { padding: 10px; background: #21262d; color: var(--text); border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: bold; }
-        .btn-reset { color: var(--down); }
-
-        /* Estados de Alerta Visual Base */
-        .term-up { background: #062a14 !important; border-color: var(--up) !important; }
-        .term-down { background: #320a0a !important; border-color: var(--down) !important; }
-        .term-noise { background: #211d12 !important; border-color: var(--noise) !important; }
+        /* Clases de estado normales */
+        .term-up { border-color: var(--up) !important; background: #062a14 !important; }
+        .term-down { border-color: var(--down) !important; background: #320a0a !important; }
+        .term-noise { border-color: var(--noise) !important; opacity: 0.5; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/ort.min.js"></script>
 </head>
@@ -131,7 +113,7 @@
 
     <div class="monitor">
         <span id="last-sequence">---</span>
-        <div class="indicators">
+        <div class="indicators" style="display:flex; justify-content: space-around; font-size: 0.7rem; margin-top:10px;">
             <span id="speed-meter">SPEED: 0ms</span>
             <span id="noise-index">NOISE: 0%</span>
         </div>
@@ -140,7 +122,7 @@
     <span id="op-status">IDLE</span>
     <div id="op-confidence">SISTEMA EN ESPERA</div>
     
-    <div id="smart-stake">GESTIÓN INTELIGENTE ACTIVADA</div>
+    <div id="smart-stake">GESTIÓN</div>
 
     <div class="feedback-container">
         <button id="winBtn" class="feed-btn" style="background:var(--up)" onclick="logResult(true)">WIN</button>
@@ -148,23 +130,17 @@
     </div>
 
     <div class="session-log">
-        <div class="stat-card"><span class="stat-label">Total Trades</span><span id="stat-total" class="stat-val">0</span></div>
-        <div class="stat-card"><span class="stat-label">Accuracy</span><span id="stat-winrate" class="stat-val">0%</span></div>
+        <div style="text-align:center"><small>TOTAL</small><br><span id="stat-total" class="stat-val">0</span></div>
+        <div style="text-align:center"><small>ACCURACY</small><br><span id="stat-winrate" class="stat-val">0%</span></div>
     </div>
 
-    <div class="manual-controls">
-        <button class="touch-btn touch-up" onclick="injectManual('A')">CALL (A)</button>
-        <button class="touch-btn touch-down" onclick="injectManual('B')">PUT (B)</button>
-    </div>
-
-    <div class="admin-btns">
-        <button class="btn-action" onclick="exportData()">EXPORTAR DATOS (CSV)</button>
-        <button class="btn-action btn-reset" onclick="resetAllData()">RESET</button>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+        <button class="btn" style="padding:15px" onclick="injectManual('A')">CALL (A)</button>
+        <button class="btn" style="padding:15px" onclick="injectManual('B')">PUT (B)</button>
     </div>
 </div>
 
 <script>
-    // BLOQUEO TOTAL DE MENÚ CONTEXTUAL
     document.addEventListener('contextmenu', e => e.preventDefault());
 
     let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
@@ -191,6 +167,8 @@
         riskLevel = level;
         document.querySelectorAll('.risk-selector .btn:not(.btn-flex)').forEach(b => b.classList.remove('active'));
         button.classList.add('active');
+        // Reset visual inmediato para permitir cambio de nivel
+        resetUI();
         if(sequence.length > 0) analyze();
     }
 
@@ -273,6 +251,10 @@
             strength = (seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 300 ? 3 : 1);
         }
 
+        // LIMPIEZA DE CLASES ANTES DE RE-ANALIZAR
+        terminal.classList.remove('alert-buy', 'alert-sell', 'term-up', 'term-down', 'term-noise');
+        document.body.style.background = "var(--bg-color)";
+
         let iaProb = 0;
         if (type) {
             if (ortSession) {
@@ -287,46 +269,39 @@
             heatmap.style.background = type === "COMPRA" ? "var(--up)" : "var(--down)";
             stakeDiv.style.display = "block";
 
-            // LÓGICA DE ESCÁNDALO Y COLORES DE SEÑAL
             if (iaProb >= 0.8) {
                 if (type === "COMPRA") {
-                    terminal.className = 'terminal alert-buy';
-                    confElement.innerHTML = `<span style="color:var(--up); font-size:1.1rem">🔥 ¡COMPRA EXTREMA! ${Math.round(iaProb * 100)}%</span>`;
+                    terminal.classList.add('alert-buy');
+                    confElement.innerHTML = `<span style="color:#3fb950">¡ALTA PROBABILIDAD COMPRA!</span>`;
                     stakeDiv.className = "stake-buy";
-                    stakeDiv.innerHTML = "INVERTIR AHORA: CALL ↑";
+                    stakeDiv.innerHTML = "INVERTIR: CALL ↑";
                 } else {
-                    terminal.className = 'terminal alert-sell';
-                    confElement.innerHTML = `<span style="color:var(--down); font-size:1.1rem">🔥 ¡VENTA EXTREMA! ${Math.round(iaProb * 100)}%</span>`;
+                    terminal.classList.add('alert-sell');
+                    confElement.innerHTML = `<span style="color:#f85149">¡ALTA PROBABILIDAD VENTA!</span>`;
                     stakeDiv.className = "stake-sell";
-                    stakeDiv.innerHTML = "INVERTIR AHORA: PUT ↓";
+                    stakeDiv.innerHTML = "INVERTIR: PUT ↓";
                 }
-                if(navigator.vibrate) navigator.vibrate([150, 50, 150]);
+                if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
             } else {
-                terminal.className = 'terminal ' + (type === "COMPRA" ? 'term-up' : 'term-down');
-                confElement.innerText = `MODERADO | FUERZA: ${strength.toFixed(1)} | IA: ${Math.round(iaProb * 100)}%`;
+                terminal.classList.add(type === "COMPRA" ? 'term-up' : 'term-down');
+                confElement.innerText = `IA: ${Math.round(iaProb * 100)}% | FUERZA: ${strength.toFixed(1)}`;
                 stakeDiv.className = "stake-low";
-                stakeDiv.innerHTML = "RIESGO CONTROLADO: 2% BAL";
+                stakeDiv.innerHTML = "RIESGO MODERADO (2%)";
             }
+            statusElement.innerText = type;
+            document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
+            lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex };
         } else {
-            terminal.classList.remove('alert-buy', 'alert-sell');
             heatmap.style.width = "0%"; stakeDiv.style.display = "none";
-            
             if (isChoppy) {
                 statusElement.innerText = "¡EVITAR!";
-                confElement.innerHTML = `<span style="color:var(--noise); font-weight:bold;">MERCADO RUIDOSO (${noiseIndex}%)</span>`;
-                terminal.className = 'terminal term-noise';
+                confElement.innerHTML = `<span style="color:var(--noise)">MERCADO CON RUIDO</span>`;
+                terminal.classList.add('term-noise');
             } else {
                 statusElement.innerText = mouseEnabled ? "RADAR ON" : "IDLE";
                 confElement.innerText = "BUSCANDO PATRONES...";
-                terminal.className = 'terminal';
             }
-        }
-
-        if (type && (Date.now() - lastSignalTime > 3000) && strength > 3.5) { 
-            lastSignalTime = Date.now();
-            lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex };
-            statusElement.innerText = type;
-            document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
+            document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
         }
     }
 
@@ -344,30 +319,17 @@
         document.getElementById('stat-winrate').innerText = total > 0 ? Math.round((wins / total) * 100) + "%" : "0%";
     }
 
-    function resetAllData() {
-        if (confirm("¿Reiniciar sesión?")) { tradeHistory = []; updateStats(); resetUI(); }
-    }
-
     function resetUI() {
+        const terminal = document.getElementById('main-terminal');
+        terminal.classList.remove('alert-buy', 'alert-sell', 'term-up', 'term-down', 'term-noise');
         document.getElementById('op-status').innerText = mouseEnabled ? "RADAR ON" : "IDLE";
-        document.getElementById('main-terminal').className = 'terminal';
-        document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
+        document.getElementById('op-confidence').innerText = "SISTEMA LISTO";
         document.getElementById('heatmap-fill').style.width = "0%";
+        document.getElementById('smart-stake').style.display = "none";
+        document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
+        document.body.style.background = "var(--bg-color)";
         lastSignalData = null;
     }
-
-    function exportData() {
-        if (tradeHistory.length === 0) return;
-        let csv = "Tipo,Fuerza,Ruido,Resultado,Hora\n";
-        tradeHistory.forEach(t => csv += `${t.type},${t.strength},${t.noise},${t.result},${t.timestamp}\n`);
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
-        a.download = `session_quantum.csv`; a.click();
-    }
-    
-    // Carga de historial guardado
-    const saved = localStorage.getItem('quantum_v19_trades');
-    if(saved) { tradeHistory = JSON.parse(saved); updateStats(); }
 </script>
 </body>
 </html>
