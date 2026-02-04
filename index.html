@@ -150,7 +150,8 @@
         return;
     }
 
-    const modelUrl = 'https://huggingface.co/jacobalzminaya/quantum-alpha-v18/resolve/main/quantum_model.onnx';  // ← Your new public HF link here
+    const modelUrl = 'https://files.catbox.moe/het322.onnx';  // ← ¡Este es el bueno!
+
     console.log("Intentando cargar el modelo desde:", modelUrl);
     document.getElementById('op-confidence').innerText = `Cargando modelo IA...\nDesde: ${modelUrl.split('/').pop()}`;
 
@@ -163,11 +164,10 @@
         console.error("FALLO AL CARGAR MODELO:", err);
         console.error("Mensaje:", err.message);
         console.error("Stack:", err.stack);
-        document.getElementById('op-confidence').innerText = `ERROR: ${err.message}\nVerifica que el link sea público y sirva binario directo (prueba abriéndolo en navegador).`;
-        document.getElementById('op-status').innerText = "ERROR EN CARGA DE IA";
+        document.getElementById('op-confidence').innerText = `ERROR: ${err.message || "Ver consola"}\nLink: ${modelUrl}`;
+        document.getElementById('op-status').innerText = "ERROR EN IA";
     }
 }
-
     function setRisk(level, button) {
         riskLevel = level;
         document.querySelectorAll('.risk-selector .btn:not(.btn-flex)').forEach(b => b.classList.remove('active'));
@@ -340,3 +340,4 @@
 </script>
 </body>
 </html>
+
