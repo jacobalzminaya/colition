@@ -139,19 +139,25 @@
 
     // CARGA DE IA (VINCULADA LOCALMENTE SIN TOKEN)
 async function loadModel() {
-    if (ortSession) return;
+    if (ortSession) {
+        console.log("Modelo ya estaba cargado, saltando...");
+        return;
+    }
+    
+    console.log("Intentando cargar el modelo desde: https://raw.githubusercontent.com/jacobalzminaya/colition/main/quantum_model.onnx");
+    
     try {
-       ortSession = await ort.InferenceSession.create(
-    'https://huggingface.co/jacobalzminaya/quantum-alpha-model/resolve/main/quantum_model.onnx'
-);
-        
-        console.log("¡IA Quantum Cargada exitosamente!");
-        // Opcional: mostrar en UI que cargó
-        document.getElementById('op-confidence').innerText += "\nModelo IA cargado ✓";
+        ortSession = await ort.InferenceSession.create(
+            'https://raw.githubusercontent.com/jacobalzminaya/colition/main/quantum_model.onnx'
+        );
+        console.log("¡MODELO CARGADO EXITOSAMENTE!");
+        document.getElementById('op-confidence').innerText += "\nModelo IA cargado OK ✓";
+        document.getElementById('op-status').innerText = "RADAR + IA ACTIVO";
     } catch (err) {
-        console.error("Error al cargar el modelo ONNX:", err);
-        document.getElementById('op-confidence').innerText = "Error cargando IA: " + err.message;
-        document.getElementById('op-status').innerText = "MODELO IA FALLÓ";
+        console.error("FALLO AL CARGAR MODELO:", err);
+        console.error("Detalles del error:", err.message, err.stack);
+        document.getElementById('op-confidence').innerText = "ERROR: No se pudo cargar el modelo IA\nRevisa consola (F12)";
+        document.getElementById('op-status').innerText = "ERROR IA";
     }
 }
 
@@ -176,15 +182,24 @@ async function loadModel() {
         sequence = []; resetUI();
     }
 
-    function toggleMouse() {
-        mouseEnabled = !mouseEnabled;
-        document.getElementById('mouse-overlay').style.display = mouseEnabled ? "block" : "none";
-        const btn = document.getElementById('mouseBtn');
-        btn.style.background = mouseEnabled ? "#f1e05a" : "#21262d";
-        btn.style.color = mouseEnabled ? "#000" : "#f1e05a";
-        if (mouseEnabled) loadModel();
-        if(!mouseEnabled) resetUI();
+function toggleMouse() {
+    mouseEnabled = !mouseEnabled;
+    console.log("toggleMouse llamado - mouseEnabled ahora es:", mouseEnabled);
+    
+    document.getElementById('mouse-overlay').style.display = mouseEnabled ? "block" : "none";
+    
+    const btn = document.getElementById('mouseBtn');
+    btn.style.background = mouseEnabled ? "#f1e05a" : "#21262d";
+    btn.style.color = mouseEnabled ? "#000" : "#f1e05a";
+    
+    if (mouseEnabled) {
+        console.log("Activando modo radar → llamando loadModel()");
+        loadModel();  // ← aquí se intenta cargar
+    } else {
+        console.log("Desactivando modo radar");
+        resetUI();
     }
+}
 
     function injectManual(side) {
         sequence = [];
@@ -303,6 +318,7 @@ async function loadModel() {
 </script>
 </body>
 </html>
+
 
 
 
