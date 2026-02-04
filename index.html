@@ -145,28 +145,34 @@
     }
 
     async function loadModel() {
-        if (ortSession) return;
-        
-        // CORRECCIÓN DE HILOS Y SIMD
-        ort.env.wasm.numThreads = 1; 
-        ort.env.wasm.simd = false;
+    if (ortSession) return;
+    
+    // Configuración de compatibilidad total
+    ort.env.wasm.numThreads = 1; 
+    ort.env.wasm.simd = false;
 
-        try {
-            // CORRECCIÓN DE CACHÉ GITHUB
-            const modelUrl = 'https://raw.githubusercontent.com/jacobalzminaya/colition/main/quantum_model.onnx?v=' + Date.now();
-            
-            console.log("Conectando con IA en:", modelUrl);
-            ortSession = await ort.InferenceSession.create(modelUrl, {
-                executionProviders: ['wasm']
-            });
-            console.log("✅ IA Quantum vinculada");
-            document.getElementById('op-confidence').innerText = "SISTEMA IA: ACTIVO";
-        } catch (err) { 
-            console.error("Error IA:", err);
-            document.getElementById('op-confidence').innerText = "IA: ERROR DE FORMATO (Subir .onnx)";
-            document.getElementById('op-confidence').style.color = "#da3633";
-        }
+    try {
+        const modelUrl = 'https://raw.githubusercontent.com/jacobalzminaya/colition/main/quantum_model.onnx?v=' + Date.now();
+        
+        // Descarga binaria (ArrayBuffer) para evitar corrupción de datos
+        const response = await fetch(modelUrl);
+        if (!response.ok) throw new Error("GitHub no responde");
+        const buffer = await response.arrayBuffer();
+
+        // Iniciar sesión desde el buffer de memoria
+        ortSession = await ort.InferenceSession.create(buffer, {
+            executionProviders: ['wasm']
+        });
+        
+        console.log("✅ IA Quantum: ¡Contenedor y Archivo Sincronizados!");
+        document.getElementById('op-confidence').innerText = "SISTEMA IA: ACTIVO";
+        document.getElementById('op-confidence').style.color = "#58a6ff";
+    } catch (err) { 
+        console.error("Error de Sincronización:", err);
+        document.getElementById('op-confidence').innerText = "IA: ARCHIVO .ONNX CORRUPTO EN GITHUB";
+        document.getElementById('op-confidence').style.color = "#da3633";
     }
+}
 
     function setRisk(level, button) {
         riskLevel = level;
@@ -326,3 +332,4 @@
 </script>
 </body>
 </html>
+
