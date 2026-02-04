@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quantum Alpha PRO v19.7 | Clean & Minimal</title>
+    <title>Quantum Alpha PRO v19.7 | Ultra High Alert</title>
     <style>
         :root {
             --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
@@ -20,14 +20,27 @@
 
         .terminal { 
             background: var(--panel-bg); width: 100%; max-width: 480px; border: 1px solid var(--neutral); border-radius: 16px; padding: 20px; 
-            box-shadow: 0 25px 50px rgba(0,0,0,0.9); position: relative; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.9); position: relative; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        /* Barra de Probabilidad */
-        #heatmap-bar { width: 100%; height: 4px; background: var(--neutral); margin-bottom: 20px; border-radius: 2px; overflow: hidden; }
+        /* --- ANIMACIONES ESCANDALOZAS --- */
+        @keyframes pulse-up {
+            0% { box-shadow: 0 0 0px var(--up); transform: scale(1); }
+            50% { box-shadow: 0 0 60px var(--up); transform: scale(1.02); }
+            100% { box-shadow: 0 0 0px var(--up); transform: scale(1); }
+        }
+        @keyframes pulse-down {
+            0% { box-shadow: 0 0 0px var(--down); transform: scale(1); }
+            50% { box-shadow: 0 0 60px var(--down); transform: scale(1.02); }
+            100% { box-shadow: 0 0 0px var(--down); transform: scale(1); }
+        }
+
+        .alert-buy { animation: pulse-up 0.5s infinite; border: 4px solid var(--up) !important; background: #062a14 !important; }
+        .alert-sell { animation: pulse-down 0.5s infinite; border: 4px solid var(--down) !important; background: #320a0a !important; }
+
+        #heatmap-bar { width: 100%; height: 5px; background: var(--neutral); margin-bottom: 20px; border-radius: 2px; overflow: hidden; }
         #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.6s ease; }
 
-        /* Contenedores Compactos */
         .selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .time-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
         .risk-selector { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
@@ -44,7 +57,6 @@
         #mouseBtn { width:100%; padding:14px; margin-bottom:15px; border-radius:10px; cursor:pointer; background:#21262d; color:var(--gold); font-weight:800; border:1px solid var(--gold); letter-spacing: 1px; }
         #mouse-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; cursor: crosshair; background: rgba(0,0,0,0.01); }
 
-        /* Monitor Central Focalizado */
         .monitor { background: #010409; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 15px; border: 1px solid #30363d; position: relative; }
         #last-sequence { font-size: 2.6rem; letter-spacing: 12px; font-family: 'Consolas', monospace; color: #fff; display: block; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
         
@@ -53,13 +65,18 @@
         #speed-meter { color: var(--gold); }
         #noise-index { color: var(--noise); }
 
-        /* Mensajes de Operación */
-        #op-status { font-weight: 900; font-size: 1.8rem; text-align: center; display: block; margin: 15px 0 5px 0; color: #fff; text-transform: uppercase; }
-        #op-confidence { font-size: 0.8rem; color: #8b949e; text-align: center; display: block; min-height: 45px; margin-bottom: 10px; }
+        #op-status { font-weight: 900; font-size: 2.2rem; text-align: center; display: block; margin: 15px 0 5px 0; color: #fff; text-transform: uppercase; }
+        #op-confidence { font-size: 0.85rem; font-weight: bold; color: #8b949e; text-align: center; display: block; min-height: 45px; margin-bottom: 10px; }
         
-        #smart-stake { background: rgba(88, 166, 255, 0.05); border-radius: 8px; padding: 12px; margin-bottom: 15px; text-align: center; font-size: 0.85rem; color: var(--accent); border: 1px dashed rgba(88, 166, 255, 0.4); display: none; }
+        /* Gestión de Capital Visual Extrema */
+        #smart-stake { 
+            border-radius: 8px; padding: 14px; margin-bottom: 15px; text-align: center; 
+            font-size: 1rem; font-weight: 900; display: none; text-transform: uppercase;
+        }
+        .stake-buy { background: var(--up); color: white; box-shadow: 0 0 20px var(--up); }
+        .stake-sell { background: var(--down); color: white; box-shadow: 0 0 20px var(--down); }
+        .stake-low { background: rgba(88, 166, 255, 0.05); color: var(--accent); border: 1px dashed var(--accent); }
 
-        /* Feedback y Stats */
         .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .feed-btn { padding: 16px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; opacity: 0.1; pointer-events: none; transition: 0.4s; font-size: 1rem; letter-spacing: 1px; }
         .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
@@ -69,20 +86,17 @@
         .stat-label { font-size: 0.6rem; color: #8b949e; text-transform: uppercase; display: block; margin-bottom: 4px; }
         .stat-val { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
 
-        /* Manual Buttons */
         .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
         .touch-btn { padding: 16px; border-radius: 10px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .touch-up { border-bottom: 4px solid var(--up); }
         .touch-down { border-bottom: 4px solid var(--down); }
         .touch-btn:active { transform: scale(0.96); }
 
-        /* Export & Reset */
         .admin-btns { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 15px; }
         .btn-action { padding: 10px; background: #21262d; color: var(--text); border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: bold; }
         .btn-reset { color: var(--down); }
 
-        /* Estados de Alerta Visual */
-        .conf-high { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(241, 224, 90, 0.25); }
+        /* Estados de Alerta Visual Base */
         .term-up { background: #062a14 !important; border-color: var(--up) !important; }
         .term-down { background: #320a0a !important; border-color: var(--down) !important; }
         .term-noise { background: #211d12 !important; border-color: var(--noise) !important; }
@@ -235,6 +249,7 @@
         const confElement = document.getElementById('op-confidence');
         const heatmap = document.getElementById('heatmap-fill');
         const stakeDiv = document.getElementById('smart-stake');
+        const statusElement = document.getElementById('op-status');
         
         document.getElementById('last-sequence').innerText = seqStr || '---';
 
@@ -268,26 +283,50 @@
                 } catch (e) { iaProb = strength / 10; }
             } else { iaProb = strength / 10; }
 
-            confElement.innerText = `FUERZA: ${strength.toFixed(1)} | IA: ${Math.round(iaProb * 100)}%`;
             heatmap.style.width = (iaProb * 100) + "%";
             heatmap.style.background = type === "COMPRA" ? "var(--up)" : "var(--down)";
             stakeDiv.style.display = "block";
-            stakeDiv.innerHTML = iaProb > 0.8 ? "🔥 <strong>ALTA CONFIANZA:</strong> 5% BAL" : "⚖️ <strong>MODERADO:</strong> 2% BAL";
+
+            // LÓGICA DE ESCÁNDALO Y COLORES DE SEÑAL
+            if (iaProb >= 0.8) {
+                if (type === "COMPRA") {
+                    terminal.className = 'terminal alert-buy';
+                    confElement.innerHTML = `<span style="color:var(--up); font-size:1.1rem">🔥 ¡COMPRA EXTREMA! ${Math.round(iaProb * 100)}%</span>`;
+                    stakeDiv.className = "stake-buy";
+                    stakeDiv.innerHTML = "INVERTIR AHORA: CALL ↑";
+                } else {
+                    terminal.className = 'terminal alert-sell';
+                    confElement.innerHTML = `<span style="color:var(--down); font-size:1.1rem">🔥 ¡VENTA EXTREMA! ${Math.round(iaProb * 100)}%</span>`;
+                    stakeDiv.className = "stake-sell";
+                    stakeDiv.innerHTML = "INVERTIR AHORA: PUT ↓";
+                }
+                if(navigator.vibrate) navigator.vibrate([150, 50, 150]);
+            } else {
+                terminal.className = 'terminal ' + (type === "COMPRA" ? 'term-up' : 'term-down');
+                confElement.innerText = `MODERADO | FUERZA: ${strength.toFixed(1)} | IA: ${Math.round(iaProb * 100)}%`;
+                stakeDiv.className = "stake-low";
+                stakeDiv.innerHTML = "RIESGO CONTROLADO: 2% BAL";
+            }
         } else {
+            terminal.classList.remove('alert-buy', 'alert-sell');
             heatmap.style.width = "0%"; stakeDiv.style.display = "none";
-            confElement.innerText = "ESPERANDO PATRÓN...";
+            
+            if (isChoppy) {
+                statusElement.innerText = "¡EVITAR!";
+                confElement.innerHTML = `<span style="color:var(--noise); font-weight:bold;">MERCADO RUIDOSO (${noiseIndex}%)</span>`;
+                terminal.className = 'terminal term-noise';
+            } else {
+                statusElement.innerText = mouseEnabled ? "RADAR ON" : "IDLE";
+                confElement.innerText = "BUSCANDO PATRONES...";
+                terminal.className = 'terminal';
+            }
         }
 
         if (type && (Date.now() - lastSignalTime > 3000) && strength > 3.5) { 
             lastSignalTime = Date.now();
             lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex };
-            terminal.className = 'terminal ' + (type === "COMPRA" ? 'term-up' : 'term-down');
-            if (strength >= 7) terminal.classList.add('conf-high');
-            document.getElementById('op-status').innerText = type;
+            statusElement.innerText = type;
             document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
-        } else if (isChoppy) {
-            terminal.className = 'terminal term-noise';
-            document.getElementById('op-status').innerText = "RUIDO ALTO";
         }
     }
 
@@ -326,10 +365,9 @@
         a.download = `session_quantum.csv`; a.click();
     }
     
-    // Auto-load stats
+    // Carga de historial guardado
     const saved = localStorage.getItem('quantum_v19_trades');
     if(saved) { tradeHistory = JSON.parse(saved); updateStats(); }
 </script>
 </body>
 </html>
-
