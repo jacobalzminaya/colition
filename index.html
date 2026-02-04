@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quantum Alpha PRO v19.6 | No-Menu Edition</title>
+    <title>Quantum Alpha PRO v19.7 | Clean & Minimal</title>
     <style>
         :root {
             --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
             --up: #238636; --down: #da3633; --text: #c9d1d9; --gold: #f1e05a;
             --noise: #d29922; --flex-on: #8957e5; --neutral: #30363d;
         }
-        /* Bloqueo visual de selección de texto */
         body { 
             background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; 
             display: flex; justify-content: center; align-items: center; min-height: 100vh; 
@@ -20,71 +19,79 @@
         * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
         .terminal { 
-            background: var(--panel-bg); width: 100%; max-width: 500px; border: 2px solid var(--neutral); border-radius: 12px; padding: 20px; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8); position: relative; transition: all 0.3s ease;
+            background: var(--panel-bg); width: 100%; max-width: 480px; border: 1px solid var(--neutral); border-radius: 16px; padding: 20px; 
+            box-shadow: 0 25px 50px rgba(0,0,0,0.9); position: relative; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        #heatmap-bar { width: 100%; height: 6px; background: var(--neutral); margin-bottom: 15px; border-radius: 3px; overflow: hidden; }
-        #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.5s; }
+        /* Barra de Probabilidad */
+        #heatmap-bar { width: 100%; height: 4px; background: var(--neutral); margin-bottom: 20px; border-radius: 2px; overflow: hidden; }
+        #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.6s ease; }
 
-        .selectors { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
-        .time-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-        .risk-selector { display: flex; gap: 6px; }
+        /* Contenedores Compactos */
+        .selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .time-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+        .risk-selector { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
         
         .btn { 
             background: #21262d; border: 1px solid #30363d; color: #8b949e; 
-            padding: 12px 5px; border-radius: 6px; cursor: pointer; 
-            font-size: 0.75rem; text-align: center; font-weight: bold; 
+            padding: 10px 2px; border-radius: 6px; cursor: pointer; 
+            font-size: 0.7rem; text-align: center; font-weight: bold; transition: 0.2s;
         }
-        .btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-        .btn-flex { border-color: var(--flex-on); color: var(--flex-on); flex: 1.5; }
+        .btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 10px rgba(88, 166, 255, 0.3); }
+        .btn-flex { border-color: var(--flex-on); color: var(--flex-on); }
         .btn-flex.active { background: var(--flex-on) !important; color: white !important; }
 
-        #mouseBtn { width:100%; padding:14px; margin-bottom:10px; border-radius:8px; cursor:pointer; background:#21262d; color:#f1e05a; font-weight:bold; border:1px solid #30363d; z-index: 1001; position: relative; }
+        #mouseBtn { width:100%; padding:14px; margin-bottom:15px; border-radius:10px; cursor:pointer; background:#21262d; color:var(--gold); font-weight:800; border:1px solid var(--gold); letter-spacing: 1px; }
+        #mouse-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; cursor: crosshair; background: rgba(0,0,0,0.01); }
+
+        /* Monitor Central Focalizado */
+        .monitor { background: #010409; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 15px; border: 1px solid #30363d; position: relative; }
+        #last-sequence { font-size: 2.6rem; letter-spacing: 12px; font-family: 'Consolas', monospace; color: #fff; display: block; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
         
-        /* El overlay ahora bloquea todo evento de menú */
-        #mouse-overlay { 
-            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            z-index: 1000; cursor: crosshair; background: rgba(0,0,0,0.01); 
-        }
+        .indicators { margin-top: 15px; display: flex; justify-content: space-around; border-top: 1px solid #161b22; padding-top: 10px; }
+        #speed-meter, #noise-index { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        #speed-meter { color: var(--gold); }
+        #noise-index { color: var(--noise); }
 
-        .monitor { background: #010409; border-radius: 8px; padding: 15px; text-align: center; margin-bottom: 10px; border: 1px solid #30363d; }
-        #last-sequence { font-size: 2.4rem; letter-spacing: 10px; font-family: 'Consolas', monospace; color: #fff; display: block; min-height: 45px; }
+        /* Mensajes de Operación */
+        #op-status { font-weight: 900; font-size: 1.8rem; text-align: center; display: block; margin: 15px 0 5px 0; color: #fff; text-transform: uppercase; }
+        #op-confidence { font-size: 0.8rem; color: #8b949e; text-align: center; display: block; min-height: 45px; margin-bottom: 10px; }
         
-        .indicators { margin-top: 10px; display: flex; justify-content: center; gap: 20px; }
-        #speed-meter { font-size: 0.8rem; color: var(--gold); }
-        #noise-index { font-size: 0.8rem; color: var(--noise); }
+        #smart-stake { background: rgba(88, 166, 255, 0.05); border-radius: 8px; padding: 12px; margin-bottom: 15px; text-align: center; font-size: 0.85rem; color: var(--accent); border: 1px dashed rgba(88, 166, 255, 0.4); display: none; }
 
-        #op-status { font-weight: bold; font-size: 1.5rem; text-align: center; display: block; margin: 12px 0; color: #fff; min-height: 30px; }
-        #op-confidence { font-size: 0.85rem; color: #8b949e; text-align: center; display: block; margin-bottom: 5px; min-height: 55px; border-bottom: 1px solid #30363d; padding-bottom: 10px; transition: color 0.3s; white-space: pre-line; }
-        
-        #smart-stake { background: rgba(88, 166, 255, 0.1); border-radius: 6px; padding: 10px; margin-bottom: 15px; text-align: center; font-size: 0.8rem; color: var(--accent); border: 1px dashed var(--accent); display: none; }
+        /* Feedback y Stats */
+        .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .feed-btn { padding: 16px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; opacity: 0.1; pointer-events: none; transition: 0.4s; font-size: 1rem; letter-spacing: 1px; }
+        .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
 
-        .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; position: relative; z-index: 1001; }
-        .feed-btn { padding: 15px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; opacity: 0.1; pointer-events: none; transition: 0.3s; font-size: 1.1rem; }
-        .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: scale(1.02); }
-
-        .session-log { background: rgba(0,0,0,0.4); border-radius: 8px; padding: 15px; border: 1px solid #30363d; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; z-index: 1001; position: relative; }
+        .session-log { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; display: flex; justify-content: space-around; border: 1px solid #30363d; }
         .stat-card { text-align: center; }
-        .stat-label { font-size: 0.65rem; color: #8b949e; text-transform: uppercase; display: block; }
-        .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+        .stat-label { font-size: 0.6rem; color: #8b949e; text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .stat-val { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
 
-        .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #30363d; z-index: 1001; position: relative; }
-        .touch-btn { padding: 15px; border-radius: 8px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .touch-up { border-left: 4px solid var(--up); }
-        .touch-down { border-left: 4px solid var(--down); }
+        /* Manual Buttons */
+        .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .touch-btn { padding: 16px; border-radius: 10px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .touch-up { border-bottom: 4px solid var(--up); }
+        .touch-down { border-bottom: 4px solid var(--down); }
+        .touch-btn:active { transform: scale(0.96); }
 
-        .btn-export { margin-top: 15px; width: 100%; padding: 12px; background: #21262d; color: var(--gold); border: 1px solid #30363d; border-radius: 8px; cursor: pointer; font-weight: bold; z-index: 1001; position: relative; }
-        .btn-reset { margin-top:10px; background:#da3633; color:white; border: none; }
+        /* Export & Reset */
+        .admin-btns { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 15px; }
+        .btn-action { padding: 10px; background: #21262d; color: var(--text); border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: bold; }
+        .btn-reset { color: var(--down); }
 
-        .conf-high { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(241, 224, 90, 0.4); }
+        /* Estados de Alerta Visual */
+        .conf-high { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(241, 224, 90, 0.25); }
         .term-up { background: #062a14 !important; border-color: var(--up) !important; }
         .term-down { background: #320a0a !important; border-color: var(--down) !important; }
-        .term-noise { background: #2c2a1e !important; border-color: var(--noise) !important; }
+        .term-noise { background: #211d12 !important; border-color: var(--noise) !important; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/ort.min.js"></script>
 </head>
-<body oncontextmenu="return false;"> <div id="mouse-overlay"></div>
+<body>
+
+<div id="mouse-overlay"></div>
 
 <div class="terminal" id="main-terminal">
     <div id="heatmap-bar"><div id="heatmap-fill"></div></div>
@@ -102,7 +109,7 @@
             <button class="btn" onclick="setRisk(1, this)">N1</button>
             <button class="btn active" onclick="setRisk(2, this)">N2</button>
             <button class="btn" onclick="setRisk(3, this)">N3</button>
-            <button id="flexBtn" class="btn btn-flex" onclick="toggleFlexMode()">FLEX: OFF</button>
+            <button id="flexBtn" class="btn btn-flex" onclick="toggleFlexMode()">FLEX OFF</button>
         </div>
     </div>
 
@@ -111,15 +118,15 @@
     <div class="monitor">
         <span id="last-sequence">---</span>
         <div class="indicators">
-            <span id="speed-meter">MOMENTUM: 0ms</span>
-            <span id="noise-index">RUIDO: 0%</span>
+            <span id="speed-meter">SPEED: 0ms</span>
+            <span id="noise-index">NOISE: 0%</span>
         </div>
     </div>
 
     <span id="op-status">IDLE</span>
-    <div id="op-confidence">ESPERANDO IMPULSO...</div>
+    <div id="op-confidence">SISTEMA EN ESPERA</div>
     
-    <div id="smart-stake">GESTIÓN: ESPERANDO SEÑAL</div>
+    <div id="smart-stake">GESTIÓN INTELIGENTE ACTIVADA</div>
 
     <div class="feedback-container">
         <button id="winBtn" class="feed-btn" style="background:var(--up)" onclick="logResult(true)">WIN</button>
@@ -127,28 +134,24 @@
     </div>
 
     <div class="session-log">
-        <div class="stat-card">
-            <span class="stat-label">Trades</span>
-            <span id="stat-total" class="stat-val">0</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">Win Rate</span>
-            <span id="stat-winrate" class="stat-val">0%</span>
-        </div>
+        <div class="stat-card"><span class="stat-label">Total Trades</span><span id="stat-total" class="stat-val">0</span></div>
+        <div class="stat-card"><span class="stat-label">Accuracy</span><span id="stat-winrate" class="stat-val">0%</span></div>
     </div>
 
     <div class="manual-controls">
-        <button class="touch-btn touch-up" onclick="injectManual('A')">⬆️ ALCISTA</button>
-        <button class="touch-btn touch-down" onclick="injectManual('B')">⬇️ BAJISTA</button>
+        <button class="touch-btn touch-up" onclick="injectManual('A')">CALL (A)</button>
+        <button class="touch-btn touch-down" onclick="injectManual('B')">PUT (B)</button>
     </div>
 
-    <button class="btn-export" onclick="exportData()">EXPORTAR SESIÓN (CSV)</button>
-    <button class="btn-export btn-reset" onclick="resetAllData()">RESET TODOS LOS DATOS</button>
+    <div class="admin-btns">
+        <button class="btn-action" onclick="exportData()">EXPORTAR DATOS (CSV)</button>
+        <button class="btn-action btn-reset" onclick="resetAllData()">RESET</button>
+    </div>
 </div>
 
 <script>
     // BLOQUEO TOTAL DE MENÚ CONTEXTUAL
-    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.addEventListener('contextmenu', e => e.preventDefault());
 
     let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
     let lastClickTime = 0, lastSignalTime = 0, lastManualInjectionTime = 0;
@@ -159,15 +162,14 @@
 
     async function loadModel() {
         if (ortSession) return;
-        const conf = document.getElementById('op-confidence');
         try {
             ort.env.wasm.numThreads = 1;
             const response = await fetch('./quantum_model.onnx?v=' + Date.now());
             const buffer = await response.arrayBuffer();
             ortSession = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
-            conf.innerText = "IA: ONLINE";
+            document.getElementById('op-confidence').innerText = "IA: CONECTADA";
         } catch (e) {
-            conf.innerText = "IA: ERROR CARGA";
+            document.getElementById('op-confidence').innerText = "IA: MODO LOCAL";
         }
     }
 
@@ -182,7 +184,7 @@
         flexMode = !flexMode;
         const btn = document.getElementById('flexBtn');
         btn.classList.toggle('active');
-        btn.innerText = flexMode ? "FLEX: ON" : "FLEX: OFF";
+        btn.innerText = flexMode ? "FLEX ON" : "FLEX OFF";
         if(sequence.length > 0) analyze();
     }
 
@@ -196,45 +198,35 @@
         mouseEnabled = !mouseEnabled;
         document.getElementById('mouse-overlay').style.display = mouseEnabled ? "block" : "none";
         const btn = document.getElementById('mouseBtn');
-        btn.style.background = mouseEnabled ? "#f1e05a" : "#21262d";
-        btn.style.color = mouseEnabled ? "#000" : "#f1e05a";
+        btn.style.background = mouseEnabled ? "var(--gold)" : "#21262d";
+        btn.style.color = mouseEnabled ? "#000" : "var(--gold)";
         if (mouseEnabled) loadModel();
         if(!mouseEnabled) resetUI();
     }
 
     function injectManual(side) {
         const now = Date.now();
-        if (now - lastManualInjectionTime < 200) return;
+        if (now - lastManualInjectionTime < 150) return;
         lastManualInjectionTime = now;
-        if(navigator.vibrate) navigator.vibrate(40);
+        if(navigator.vibrate) navigator.vibrate(30);
         const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
         lastClickTime = now;
-        
         sequence.push({ val: side, diff: diff });
         if(sequence.length > 12) sequence.shift();
         analyze();
     }
 
-    // LISTENER MEJORADO PARA EL OVERLAY
-    const overlay = document.getElementById('mouse-overlay');
-    overlay.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // Previene cualquier acción del sistema
-        e.stopPropagation(); // Evita que el evento suba
-        
+    document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
+        e.preventDefault();
         const now = Date.now();
         const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
         lastClickTime = now;
-        
-        let val = "";
-        if (e.button === 0) val = 'B'; // Click Izquierdo -> Venta
-        if (e.button === 2) val = 'A'; // Click Derecho -> Compra
-        
+        let val = (e.button === 0) ? 'B' : (e.button === 2 ? 'A' : "");
         if(val !== "") {
             sequence.push({val, diff});
             if(sequence.length > 12) sequence.shift();
             analyze();
         }
-        return false;
     });
 
     async function analyze() {
@@ -250,11 +242,8 @@
         const noiseIndex = Math.min(100, Math.round((oscillationCount / Math.max(1, seqStr.length - 1)) * 120));
         const recentAvgSpeed = sequence.slice(-5).reduce((acc, s) => acc + s.diff, 0) / Math.max(1, sequence.slice(-5).length);
 
-        const lastDiff = sequence.length > 0 ? sequence[sequence.length-1].diff : 0;
-        let decay = lastDiff > 1500 ? 0.6 : 1.0; 
-
-        document.getElementById('speed-meter').innerText = `MOMENTUM: ${Math.round(recentAvgSpeed)}ms`;
-        document.getElementById('noise-index').innerText = `RUIDO: ${noiseIndex}%`;
+        document.getElementById('speed-meter').innerText = `SPEED: ${Math.round(recentAvgSpeed)}ms`;
+        document.getElementById('noise-index').innerText = `NOISE: ${noiseIndex}%`;
 
         let noiseMax = noiseThresholdByLevel[riskLevel] + (flexMode ? 15 : 0);
         const isChoppy = noiseIndex > noiseMax;
@@ -263,10 +252,10 @@
         let type = null, strength = 0;
         if (new RegExp('A{' + minR + ',}').test(seqStr) && !isChoppy) {
             type = "COMPRA";
-            strength = ((seqStr.slice(-6).match(/A/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1)) * decay;
+            strength = (seqStr.slice(-6).match(/A/g) || []).length + (recentAvgSpeed < 300 ? 3 : 1);
         } else if (new RegExp('B{' + minR + ',}').test(seqStr) && !isChoppy) {
             type = "VENTA";
-            strength = ((seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1)) * decay;
+            strength = (seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 300 ? 3 : 1);
         }
 
         let iaProb = 0;
@@ -276,24 +265,25 @@
                     const inputTensor = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode ? 1 : 0]), [1, 4]);
                     const results = await ortSession.run({ input: inputTensor });
                     iaProb = results.prob_win.data[0];
-                } catch (e) {}
-            }
-            confElement.innerText = `Fuerza: ${strength.toFixed(1)} | IA: ${Math.round(iaProb * 100)}%`;
+                } catch (e) { iaProb = strength / 10; }
+            } else { iaProb = strength / 10; }
+
+            confElement.innerText = `FUERZA: ${strength.toFixed(1)} | IA: ${Math.round(iaProb * 100)}%`;
             heatmap.style.width = (iaProb * 100) + "%";
             heatmap.style.background = type === "COMPRA" ? "var(--up)" : "var(--down)";
             stakeDiv.style.display = "block";
-            stakeDiv.innerHTML = iaProb > 0.8 ? "💰 SMART STAKE: 5%" : (iaProb > 0.6 ? "💵 SMART STAKE: 2%" : "⚠️ RIESGO ALTO");
+            stakeDiv.innerHTML = iaProb > 0.8 ? "🔥 <strong>ALTA CONFIANZA:</strong> 5% BAL" : "⚖️ <strong>MODERADO:</strong> 2% BAL";
         } else {
             heatmap.style.width = "0%"; stakeDiv.style.display = "none";
-            confElement.innerText = "ESPERANDO IMPULSO...";
+            confElement.innerText = "ESPERANDO PATRÓN...";
         }
 
-        if (type && (Date.now() - lastSignalTime > 4000) && strength > 3) { 
+        if (type && (Date.now() - lastSignalTime > 3000) && strength > 3.5) { 
             lastSignalTime = Date.now();
-            lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex, flex: flexMode };
+            lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex };
             terminal.className = 'terminal ' + (type === "COMPRA" ? 'term-up' : 'term-down');
             if (strength >= 7) terminal.classList.add('conf-high');
-            document.getElementById('op-status').innerText = (strength >= 7 ? "🔥 " : "🚀 ") + type;
+            document.getElementById('op-status').innerText = type;
             document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
         } else if (isChoppy) {
             terminal.className = 'terminal term-noise';
@@ -316,14 +306,11 @@
     }
 
     function resetAllData() {
-        if (confirm("¿Borrar historial?")) {
-            tradeHistory = []; localStorage.removeItem('quantum_v19_trades');
-            updateStats(); resetUI();
-        }
+        if (confirm("¿Reiniciar sesión?")) { tradeHistory = []; updateStats(); resetUI(); }
     }
 
     function resetUI() {
-        document.getElementById('op-status').innerText = mouseEnabled ? "RADAR ACTIVO" : "IDLE";
+        document.getElementById('op-status').innerText = mouseEnabled ? "RADAR ON" : "IDLE";
         document.getElementById('main-terminal').className = 'terminal';
         document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
         document.getElementById('heatmap-fill').style.width = "0%";
@@ -331,13 +318,17 @@
     }
 
     function exportData() {
-        if (tradeHistory.length === 0) return alert("Sin datos.");
-        let csv = "Tipo,Fuerza,IA_Prob,Resultado,Hora\n";
-        tradeHistory.forEach(t => csv += `${t.type},${t.strength.toFixed(2)},${t.iaProb},${t.result},${t.timestamp}\n`);
+        if (tradeHistory.length === 0) return;
+        let csv = "Tipo,Fuerza,Ruido,Resultado,Hora\n";
+        tradeHistory.forEach(t => csv += `${t.type},${t.strength},${t.noise},${t.result},${t.timestamp}\n`);
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
-        a.download = `quantum_v19_pro.csv`; a.click();
+        a.download = `session_quantum.csv`; a.click();
     }
+    
+    // Auto-load stats
+    const saved = localStorage.getItem('quantum_v19_trades');
+    if(saved) { tradeHistory = JSON.parse(saved); updateStats(); }
 </script>
 </body>
 </html>
