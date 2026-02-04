@@ -127,35 +127,47 @@
     const noiseThresholdByLevel = {1: 65, 2: 55, 3: 50};
 
     // 1. CARGA DE MODELO (MODO ESTABLE SIN SIMD)
-    async function loadModel() {
-        if (ortSession) return;
-        
-        // CONFIGURACIÓN DE COMPATIBILIDAD CRÍTICA
-        ort.env.wasm.numThreads = 1; 
-        ort.env.wasm.simd = false; // Desactiva SIMD para evitar el error TypeError: Lt[m]
+   async function loadModel() {
+    if (ortSession) return;
+    
+    // Configuración de máxima compatibilidad
+    ort.env.wasm.numThreads = 1; 
+    ort.env.wasm.simd = false; 
+    ort.env.wasm.proxy = false; // Añadido para evitar bloqueos de hilos
 
-        try {
-            const modelUrl = 'https://raw.githubusercontent.com/jacobalzminaya/colition/main/quantum_model.onnx?v=' + Date.now();
-            const response = await fetch(modelUrl);
-            if (!response.ok) throw new Error("Archivo no encontrado en GitHub");
-            
-            const buffer = await response.arrayBuffer();
-            
-            // Creación de sesión con proveedor WASM puro
-            ortSession = await ort.InferenceSession.create(buffer, { 
-                executionProviders: ['wasm'],
-                graphOptimizationLevel: 'all' 
-            });
-            
-            document.getElementById('op-confidence').innerText = "SISTEMA IA: CONECTADO";
-            document.getElementById('op-confidence').style.color = "#58a6ff";
-            console.log("✅ IA Quantum vinculada con éxito.");
-        } catch (err) { 
-            console.error("❌ Fallo de carga:", err);
-            document.getElementById('op-confidence').innerText = "IA: ERROR DE COMPATIBILIDAD WASM";
-            document.getElementById('op-confidence').style.color = "#da3633";
+    try {
+        const modelUrl = 'https://raw.githubusercontent.com/jacobalzminaya/colition/main/quantum_model.onnx?v=' + Date.now();
+        
+        console.log("intentando conectar con: " + modelUrl);
+        
+        const response = await fetch(modelUrl);
+        
+        if (!response.ok) {
+            throw new Error(`Error de red: ${response.status}. Revisa si el archivo está en GitHub.`);
         }
+        
+        const buffer = await response.arrayBuffer();
+        
+        // Verificamos si el archivo está vacío o es un error HTML
+        if (buffer.byteLength < 1000) {
+            throw new Error("El archivo descargado es demasiado pequeño. ¿Es el ONNX real?");
+        }
+
+        ortSession = await ort.InferenceSession.create(buffer, { 
+            executionProviders: ['wasm'],
+            graphOptimizationLevel: 'all' 
+        });
+        
+        document.getElementById('op-confidence').innerText = "SISTEMA IA: ONLINE";
+        document.getElementById('op-confidence').style.color = "#58a6ff";
+        console.log("✅ Modelo cargado. Tamaño: " + buffer.byteLength + " bytes");
+
+    } catch (err) { 
+        console.error("Fallo detallado:", err);
+        document.getElementById('op-confidence').innerText = "ERROR: " + err.message;
+        document.getElementById('op-confidence').style.color = "#da3633";
     }
+}
 
     // 2. VÍNCULO AUTOMÁTICO CON SERVIDOR EXTERNO (AJUSTADO)
     async function syncToExternalServer(tradeData) {
@@ -297,3 +309,4 @@
 </script>
 </body>
 </html>
+
