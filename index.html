@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Quantum Alpha v18.6 | IA + Iniweb Auto-Sync</title>
+    <title>Quantum Alpha v18.6 | IA + External Server Sync</title>
     <style>
         :root {
             --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
@@ -53,12 +53,6 @@
         .touch-down { border-left: 4px solid var(--down); }
         
         .btn-export { margin-top: 15px; width: 100%; padding: 10px; background: #21262d; color: var(--gold); border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .btn-reset { margin-top:10px; background:#da3633; color:white; border: none; }
-
-        .conf-high { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(241, 224, 90, 0.4); }
-        .term-up { background: #062a14 !important; border-color: var(--up) !important; }
-        .term-down { background: #320a0a !important; border-color: var(--down) !important; }
-        .term-noise { background: #2c2a1e !important; border-color: var(--noise) !important; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
 </head>
@@ -93,7 +87,7 @@
     </div>
 
     <span id="op-status">IDLE</span>
-    <div id="op-confidence">ESPERANDO IMPULSO...</div>
+    <div id="op-confidence">IA: DESCONECTADA</div>
 
     <div class="feedback-container">
         <button id="winBtn" class="feed-btn" style="background:var(--up)" onclick="logResult(true)">WIN</button>
@@ -102,7 +96,7 @@
 
     <div class="session-log">
         <div class="stat-card">
-            <span class="stat-label">Vínculo Iniweb</span>
+            <span class="stat-label">Total Trades</span>
             <span id="stat-total" class="stat-val">0</span>
         </div>
         <div class="stat-card">
@@ -113,16 +107,11 @@
 
     <div class="manual-controls">
         <span class="manual-label">Modo Manual / Touch</span>
-        <button class="touch-btn touch-up" onclick="injectManual('A')">
-            <span>⬆️ ALCISTA</span>
-        </button>
-        <button class="touch-btn touch-down" onclick="injectManual('B')">
-            <span>⬇️ BAJISTA</span>
-        </button>
+        <button class="touch-btn touch-up" onclick="injectManual('A')">⬆️ ALCISTA</button>
+        <button class="touch-btn touch-down" onclick="injectManual('B')">⬇️ BAJISTA</button>
     </div>
 
     <button class="btn-export" onclick="exportData()">EXPORTAR SESIÓN (CSV)</button>
-    <button class="btn-export btn-reset" onclick="resetAllData()">RESET DATOS</button>
 </div>
 
 <script>
@@ -133,110 +122,61 @@
     const minRachaByLevel = {1: 3, 2: 4, 3: 5};
     const noiseThresholdByLevel = {1: 65, 2: 55, 3: 50};
 
-    // PERSISTENCIA LOCAL + SYNC
-    if (localStorage.getItem('quantum_v18_trades')) {
-        tradeHistory = JSON.parse(localStorage.getItem('quantum_v18_trades'));
-        setTimeout(updateStats, 100);
-    }
-
+    // 1. CARGA DE MODELO (MODO BINARIO PARA EVITAR ERROR PROTOBUF)
     async function loadModel() {
         if (ortSession) return;
         ort.env.wasm.numThreads = 1; 
-        ort.env.wasm.simd = false;
 
         try {
             const modelUrl = 'https://raw.githubusercontent.com/jacobalzminaya/colition/main/quantum_model.onnx?v=' + Date.now();
             const response = await fetch(modelUrl);
-            if (!response.ok) throw new Error("GitHub Offline");
+            if (!response.ok) throw new Error("Archivo no encontrado en GitHub");
+            
             const buffer = await response.arrayBuffer();
-
             ortSession = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
             
-            document.getElementById('op-confidence').innerText = "VINCULADO: IA + INIWEB";
+            document.getElementById('op-confidence').innerText = "SISTEMA IA: CONECTADO";
             document.getElementById('op-confidence').style.color = "#58a6ff";
         } catch (err) { 
-            document.getElementById('op-confidence').innerText = "IA: ERROR DE VÍNCULO";
+            console.error(err);
+            document.getElementById('op-confidence').innerText = "IA: ERROR DE ARCHIVO EN GITHUB";
             document.getElementById('op-confidence').style.color = "#da3633";
         }
     }
 
-    // --- LÓGICA DE GUARDADO AUTOMÁTICO EN INIWEB ---
-    async function syncToIniweb(tradeData) {
-        console.log("Enviando a base de datos Iniweb...");
-        // Esta función simula el envío a tu backend de Iniweb
-        // Cumple con guardar en nombre_personalizados y actualizar permisos_usuarios
+    // 2. VÍNCULO AUTOMÁTICO CON SERVIDOR EXTERNO
+    async function syncToExternalServer(tradeData) {
+        // Cambia esta URL por la de tu servidor real
+        const SERVER_URL = "https://tu-pagina-web.com/api/save_trade"; 
         try {
-            /* await fetch('TU_API_INIWEB_URL', {
+            await fetch(SERVER_URL, {
                 method: 'POST',
-                body: JSON.stringify({
-                    tabla: 'nombre_personalizados',
-                    data: tradeData,
-                    permisos_update: {
-                        tabla: 'permisos_usuarios',
-                        codigo: riskLevel
-                    }
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(tradeData)
             });
-            */
-            console.log("✅ Datos sincronizados con tablas Iniweb.");
+            console.log("✅ Sincronizado con servidor externo");
         } catch (e) {
-            console.error("Error de red con Iniweb");
+            console.warn("⚠️ Servidor externo offline, guardado local exitoso.");
         }
     }
 
     function logResult(isWin) {
         if (!lastSignalData) return;
-        const newTrade = { ...lastSignalData, result: isWin ? 1 : 0, timestamp: new Date().toLocaleTimeString() };
-        
-        tradeHistory.push(newTrade);
+        const resultData = {
+            ...lastSignalData,
+            resultado: isWin ? 1 : 0,
+            timestamp: new Date().toISOString()
+        };
+
+        tradeHistory.push(resultData);
         localStorage.setItem('quantum_v18_trades', JSON.stringify(tradeHistory));
         
-        // Vínculo automático
-        syncToIniweb(newTrade);
-        
+        syncToExternalServer(resultData); // Sincronización automática
         updateStats();
-        sequence = []; resetUI();
+        resetUI();
     }
 
-    // --- RESTO DE FUNCIONES DEL TERMINAL ---
-    function setRisk(level, button) {
-        riskLevel = level;
-        document.querySelectorAll('.risk-selector .btn:not(.btn-flex)').forEach(b => b.classList.remove('active'));
-        button.classList.add('active');
-        if(sequence.length > 0) analyze();
-    }
-
-    function toggleFlexMode() {
-        flexMode = !flexMode;
-        const btn = document.getElementById('flexBtn');
-        btn.classList.toggle('active');
-        btn.innerText = flexMode ? "FLEX: ON" : "FLEX: OFF";
-        if(sequence.length > 0) analyze();
-    }
-
-    function toggleMouse() {
-        mouseEnabled = !mouseEnabled;
-        document.getElementById('mouse-overlay').style.display = mouseEnabled ? "block" : "none";
-        const btn = document.getElementById('mouseBtn');
-        btn.style.background = mouseEnabled ? "#f1e05a" : "#21262d";
-        btn.style.color = mouseEnabled ? "#000" : "#f1e05a";
-        if (mouseEnabled) loadModel();
-        if(!mouseEnabled) resetUI();
-    }
-
-    document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const now = Date.now();
-        const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
-        lastClickTime = now;
-        let val = (e.button === 0) ? 'B' : (e.button === 2 ? 'A' : "");
-        if(val !== "") {
-            sequence.push({val, diff});
-            if(sequence.length > 12) sequence.shift();
-            analyze();
-        }
-    });
-
+    // 3. LÓGICA DE ANÁLISIS
     async function analyze() {
         const seqStr = sequence.map(s => s.val).join('');
         const terminal = document.getElementById('main-terminal');
@@ -254,63 +194,81 @@
         const isChoppy = noiseIndex > noiseMax;
         const minR = minRachaByLevel[riskLevel];
         
-        let type = null, strength = 0;
-        if (new RegExp('A{' + minR + ',}').test(seqStr) && !isChoppy) {
-            type = "COMPRA";
-            strength = (seqStr.slice(-6).match(/A/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1);
-        } else if (new RegExp('B{' + minR + ',}').test(seqStr) && !isChoppy) {
-            type = "VENTA";
-            strength = (seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1);
-        }
+        let type = null;
+        if (new RegExp('A{' + minR + ',}').test(seqStr) && !isChoppy) type = "COMPRA";
+        else if (new RegExp('B{' + minR + ',}').test(seqStr) && !isChoppy) type = "VENTA";
 
-        let confidenceMsg = "ESPERANDO IMPULSO...", finalColor = '#8b949e';
-        if (type) {
-            confidenceMsg = `Fuerza: ${strength.toFixed(1)} | IA Link: Active`;
+        if (type && (Date.now() - lastSignalTime > 5000)) {
+            let strength = (seqStr.slice(-minR).match(/[AB]/g) || []).length + (recentAvgSpeed < 300 ? 3 : 1);
+            lastSignalTime = Date.now();
+            lastSignalData = { type, strength, noise: noiseIndex, risk: riskLevel, flex: flexMode };
+            
+            terminal.className = 'terminal ' + (type === "COMPRA" ? 'term-up' : 'term-down');
+            document.getElementById('op-status').innerText = "🚀 " + type;
+            document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
+
+            // Predicción IA
             if (ortSession) {
                 try {
-                    const inputTensor = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode ? 1 : 0]), [1, 4]);
+                    const inputTensor = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode?1:0]), [1, 4]);
                     const results = await ortSession.run({ input: inputTensor });
                     const prob = results.prob_win.data[0];
-                    confidenceMsg += `\nPROB. ÉXITO: ${Math.round(prob * 100)}%`;
-                } catch (e) {}
+                    confElement.innerText = `FUERZA: ${strength.toFixed(1)} | IA PREDICT: ${Math.round(prob*100)}%`;
+                    confElement.style.color = prob > 0.75 ? '#f1e05a' : '#58a6ff';
+                } catch (e) { console.error(e); }
             }
-            finalColor = strength >= 7 ? '#f1e05a' : '#58a6ff';
-        }
-
-        confElement.innerText = confidenceMsg;
-        confElement.style.color = finalColor;
-
-        if (type && (Date.now() - lastSignalTime > 5000) && strength > 3) { 
-            lastSignalTime = Date.now();
-            lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex, flex: flexMode };
-            terminal.className = 'terminal ' + (type === "COMPRA" ? 'term-up' : 'term-down');
-            document.getElementById('op-status').innerText = type;
-            document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
         }
     }
+
+    // --- FUNCIONES DE SOPORTE ---
+    function setRisk(level, button) {
+        riskLevel = level;
+        document.querySelectorAll('.risk-selector .btn:not(.btn-flex)').forEach(b => b.classList.remove('active'));
+        button.classList.add('active');
+    }
+
+    function toggleFlexMode() {
+        flexMode = !flexMode;
+        document.getElementById('flexBtn').classList.toggle('active');
+        document.getElementById('flexBtn').innerText = flexMode ? "FLEX: ON" : "FLEX: OFF";
+    }
+
+    function toggleMouse() {
+        mouseEnabled = !mouseEnabled;
+        document.getElementById('mouse-overlay').style.display = mouseEnabled ? "block" : "none";
+        document.getElementById('mouseBtn').style.background = mouseEnabled ? "#f1e05a" : "#21262d";
+        if (mouseEnabled) loadModel();
+    }
+
+    document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
+        const now = Date.now();
+        const diff = lastClickTime === 0 ? 0 : now - lastClickTime;
+        lastClickTime = now;
+        let val = (e.button === 0) ? 'B' : (e.button === 2 ? 'A' : "");
+        if(val !== "") {
+            sequence.push({val, diff});
+            if(sequence.length > 12) sequence.shift();
+            analyze();
+        }
+    });
 
     function updateStats() {
         const total = tradeHistory.length;
-        const wins = tradeHistory.filter(t => t.result === 1).length;
+        const wins = tradeHistory.filter(t => t.resultado === 1).length;
         document.getElementById('stat-total').innerText = total;
-        document.getElementById('stat-winrate').innerText = total > 0 ? Math.round((wins / total) * 100) + "%" : "0%";
-    }
-
-    function setTime(s, button) {
-        document.querySelectorAll('.time-selector .btn').forEach(b => b.classList.remove('active'));
-        button.classList.add('active');
-        sequence = []; resetUI();
+        document.getElementById('stat-winrate').innerText = total > 0 ? Math.round((wins/total)*100)+"%" : "0%";
     }
 
     function resetUI() {
-        document.getElementById('op-status').innerText = mouseEnabled ? "RADAR" : "IDLE";
         document.getElementById('main-terminal').className = 'terminal';
+        document.getElementById('op-status').innerText = "RADAR ACTIVO";
         document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
+        sequence = [];
     }
 
-    function injectManual(side) { sequence = []; for(let i=0; i<minRachaByLevel[riskLevel]; i++) sequence.push({ val: side, diff: 200 }); analyze(); }
-    function exportData() { /* Tu lógica de exportación CSV */ }
-    function resetAllData() { if(confirm("¿Resetear?")) { tradeHistory = []; localStorage.clear(); updateStats(); resetUI(); } }
+    function injectManual(side) { sequence = []; for(let i=0; i<minRachaByLevel[riskLevel]; i++) sequence.push({val: side, diff: 200}); analyze(); }
+    function setTime(s, btn) { document.querySelectorAll('.time-selector .btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); resetUI(); }
+    function exportData() { /* Lógica de descarga CSV */ }
 </script>
 </body>
 </html>
