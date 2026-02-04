@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Quantum Alpha v18.5 | IA + Persistence + Hybrid Touch</title>
+    <title>Quantum Alpha v18.6 | IA Stable + Local Load</title>
     <style>
         :root {
             --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
@@ -61,7 +61,7 @@
         .term-down { background: #320a0a !important; border-color: var(--down) !important; }
         .term-noise { background: #2c2a1e !important; border-color: var(--noise) !important; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/ort.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/ort.min.js"></script>
 </head>
 <body oncontextmenu="return false;">
 
@@ -94,7 +94,7 @@
     </div>
 
     <span id="op-status">IDLE</span>
-    <div id="op-confidence">ESPERANDO IMPULSO... (Modelo IA: NO CARGADO AÚN)</div>
+    <div id="op-confidence">ESPERANDO IMPULSO...</div>
 
     <div class="feedback-container">
         <button id="winBtn" class="feed-btn" style="background:var(--up)" onclick="logResult(true)">WIN</button>
@@ -129,57 +129,36 @@
 </div>
 
 <script>
-    // CONFIGURACIÓN GLOBAL DE ONNX
-    ort.env.wasm.numThreads = 1;
-    ort.env.logLevel = 'verbose';
-
-    // NO necesitas externalData porque ahora es un solo archivo
-
     let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
-    let lastClickTime = 0, lastSignalTime = 0, signalBirthTime = 0;
-    let currentInterval = 10, riskLevel = 2, lastSignalData = null;
+    let lastClickTime = 0, lastSignalTime = 0;
+    let riskLevel = 2, lastSignalData = null;
     let ortSession = null;
 
     const minRachaByLevel = {1: 3, 2: 4, 3: 5};
     const noiseThresholdByLevel = {1: 65, 2: 55, 3: 50};
 
+    // CARGA DE IA (VINCULADA LOCALMENTE SIN TOKEN)
+    async function loadModel() {
+        if (ortSession) return;
+        
+        // PARCHE DE COMPATIBILIDAD CRÍTICO
+        ort.env.wasm.numThreads = 1;
+        ort.env.wasm.simd = false; 
+
+        try {
+            // Busca el archivo 'quantum_model.onnx' en la misma carpeta que este HTML
+            ortSession = await ort.InferenceSession.create('./quantum_model.onnx');
+            console.log("¡IA Quantum Cargada Localmente!");
+            document.getElementById('op-confidence').innerText = "IA: ONLINE";
+        } catch (err) { 
+            console.error("Error IA:", err);
+            document.getElementById('op-confidence').innerText = "IA: ERROR DE ARCHIVO LOCAL";
+        }
+    }
+
     if (localStorage.getItem('quantum_v18_trades')) {
         tradeHistory = JSON.parse(localStorage.getItem('quantum_v18_trades'));
         setTimeout(updateStats, 100);
-    }
-
-    async function loadModel() {
-        if (ortSession) {
-            console.log("Modelo ya estaba cargado, saltando...");
-            return;
-        }
-
-        if (typeof ort === 'undefined' || typeof ort.InferenceSession !== 'function') {
-            console.warn("Librería ONNX no lista aún. Reintentando en 2 segundos...");
-            document.getElementById('op-confidence').innerText = "Esperando librería ONNX...";
-            setTimeout(loadModel, 2000);
-            return;
-        }
-
-const modelUrl = 'https://files.catbox.moe/nv9qwc.onnx';
-
-        console.log("Intentando cargar el modelo (single file):", modelUrl);
-        document.getElementById('op-confidence').innerText = `Cargando modelo IA (single file)...`;
-
-        try {
-            ortSession = await ort.InferenceSession.create(modelUrl);
-            console.log("¡MODELO CARGADO EXITOSAMENTE!");
-            document.getElementById('op-confidence').innerText += "\nModelo IA cargado OK ✓ Listo para predicciones";
-            document.getElementById('op-status').innerText = "RADAR + IA ACTIVO";
-        } catch (err) {
-            console.error("ERROR AL CARGAR MODELO:", err);
-            console.error("Mensaje:", err.message);
-            console.error("Stack:", err.stack);
-            document.getElementById('op-confidence').innerText = 
-                `ERROR AL CARGAR MODELO:\n${err.message || "Ver consola F12"}\n` +
-                `Link usado: ${modelUrl}\nAsegúrate que sea el nuevo archivo single (sin .data)`;
-            document.getElementById('op-status').innerText = "ERROR EN IA";
-        }
     }
 
     function setRisk(level, button) {
@@ -198,7 +177,6 @@ const modelUrl = 'https://files.catbox.moe/nv9qwc.onnx';
     }
 
     function setTime(s, button) {
-        currentInterval = s;
         document.querySelectorAll('.time-selector .btn').forEach(b => b.classList.remove('active'));
         button.classList.add('active');
         sequence = []; resetUI();
@@ -206,28 +184,17 @@ const modelUrl = 'https://files.catbox.moe/nv9qwc.onnx';
 
     function toggleMouse() {
         mouseEnabled = !mouseEnabled;
-        console.log("toggleMouse llamado - mouseEnabled ahora es:", mouseEnabled);
-        
         document.getElementById('mouse-overlay').style.display = mouseEnabled ? "block" : "none";
-        
         const btn = document.getElementById('mouseBtn');
         btn.style.background = mouseEnabled ? "#f1e05a" : "#21262d";
         btn.style.color = mouseEnabled ? "#000" : "#f1e05a";
-        
-        if (mouseEnabled) {
-            console.log("Activando modo radar → llamando loadModel()");
-            loadModel();
-        } else {
-            console.log("Desactivando modo radar");
-            resetUI();
-        }
+        if (mouseEnabled) loadModel();
+        if(!mouseEnabled) resetUI();
     }
 
     function injectManual(side) {
         sequence = [];
-        for(let i=0; i<5; i++) {
-            sequence.push({ val: side, diff: 210 });
-        }
+        for(let i=0; i<5; i++) sequence.push({ val: side, diff: 210 });
         analyze();
     }
 
@@ -270,45 +237,35 @@ const modelUrl = 'https://files.catbox.moe/nv9qwc.onnx';
             strength = (seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 250 ? 4 : 1);
         }
 
-        if (type && noiseIndex > 30) strength = Math.max(0, strength - (noiseIndex / 20));
-
         let confidenceMsg = "ESPERANDO IMPULSO...", finalColor = '#8b949e';
+        
         if (type) {
             confidenceMsg = `Fuerza: ${strength.toFixed(1)} | Ruido: ${noiseIndex}%`;
-            if (strength >= 7) { confidenceMsg = "🔥 " + confidenceMsg; finalColor = '#f1e05a'; }
-            else if (strength > 3) { confidenceMsg = "🟢 " + confidenceMsg; finalColor = '#58a6ff'; }
-            else { confidenceMsg = "⚠️ " + confidenceMsg; finalColor = '#d29922'; }
-
+            
+            // INFERENCIA IA LOCAL
             if (ortSession) {
                 try {
                     const inputTensor = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode ? 1 : 0]), [1, 4]);
                     const results = await ortSession.run({ input: inputTensor });
                     const prob = results.prob_win.data[0];
-                    confidenceMsg += `\nIA PREDICT: ${Math.round(prob * 100)}% Win Prob`;
-                } catch (e) { 
-                    console.error("Error de Inferencia:", e);
-                    confidenceMsg += `\nIA: Error de Formato`; 
-                }
-            } else {
-                confidenceMsg += `\n(IA no cargada aún)`;
+                    confidenceMsg += `\nIA PROB: ${Math.round(prob * 100)}%`;
+                } catch (e) { console.error(e); }
             }
+
+            if (strength >= 7) { finalColor = '#f1e05a'; }
+            else if (strength > 3) { finalColor = '#58a6ff'; }
         }
 
         confElement.innerText = confidenceMsg;
         confElement.style.color = finalColor;
 
         if (type && (Date.now() - lastSignalTime > 5000) && strength > 3) { 
-            lastSignalTime = Date.now(); signalBirthTime = Date.now();
+            lastSignalTime = Date.now();
             lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex, flex: flexMode };
             terminal.className = 'terminal ' + (type === "COMPRA" ? 'term-up' : 'term-down');
             if (strength >= 7) terminal.classList.add('conf-high');
-            document.getElementById('op-status').innerText = (strength >= 7 ? "🔥 ALTA PRECISIÓN " : "🚀 ") + type;
+            document.getElementById('op-status').innerText = (strength >= 7 ? "🔥 FUERTE " : "🚀 ") + type;
             document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
-        } else if (isChoppy && sequence.length > 4) {
-            terminal.className = 'terminal term-noise';
-            document.getElementById('op-status').innerText = "MERCADO RUIDOSO";
-            confElement.innerText = `Evita operar - Ruido ${noiseIndex}%`;
-            confElement.style.color = '#8b949e';
         }
     }
 
@@ -352,4 +309,3 @@ const modelUrl = 'https://files.catbox.moe/nv9qwc.onnx';
 </script>
 </body>
 </html>
-
