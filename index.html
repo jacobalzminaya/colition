@@ -140,24 +140,20 @@
     // CARGA DE IA (VINCULADA LOCALMENTE SIN TOKEN)
 async function loadModel() {
     if (ortSession) return;
-    
-    // Parche de compatibilidad obligatorio
-    ort.env.wasm.numThreads = 1;
-    ort.env.wasm.simd = false; 
-
     try {
-        // En GitHub, './' significa "busca en este mismo repositorio"
-        ortSession = await ort.InferenceSession.create('./quantum_model.onnx');
-        console.log("IA ONLINE");
-        document.getElementById('op-confidence').innerText = "IA: ONLINE";
+        // Opción 1: GitHub (cuando lo arregles)
+        // ortSession = await ort.InferenceSession.create('https://raw.githubusercontent.com/jacobalzminaya/colition/main/quantum_model.onnx');
+
+        // Opción recomendada temporal o permanente (cambia por tu link real)
+        ortSession = await ort.InferenceSession.create('https://huggingface.co/tu-usuario/quantum-alpha/resolve/main/quantum_model.onnx');
+        
+        console.log("¡IA Quantum Cargada exitosamente!");
+        // Opcional: mostrar en UI que cargó
+        document.getElementById('op-confidence').innerText += "\nModelo IA cargado ✓";
     } catch (err) {
-        // Si falla el relativo, intentamos con la ruta completa
-        try {
-            ortSession = await ort.InferenceSession.create('https://jacobalzminaya.github.io/colition/quantum_model.onnx');
-            document.getElementById('op-confidence').innerText = "IA: ONLINE (ALT)";
-        } catch (e) {
-            document.getElementById('op-confidence').innerText = "ERROR DE CARGA: " + e.message;
-        }
+        console.error("Error al cargar el modelo ONNX:", err);
+        document.getElementById('op-confidence').innerText = "Error cargando IA: " + err.message;
+        document.getElementById('op-status').innerText = "MODELO IA FALLÓ";
     }
 }
 
@@ -309,5 +305,6 @@ async function loadModel() {
 </script>
 </body>
 </html>
+
 
 
