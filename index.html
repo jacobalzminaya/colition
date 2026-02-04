@@ -144,30 +144,29 @@ async function loadModel() {
     const conf = document.getElementById('op-confidence');
     
     try {
-        conf.innerText = "INICIALIZANDO NÚCLEO...";
+        conf.innerText = "ESTABLECIENDO CONEXIÓN SEGURA...";
 
-        // FORZAR RUTA DE BINARIOS (Esto evita el error 8539888)
-        ort.env.wasm.proxy = false;
-        ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/';
+        // PARCHES PARA EVITAR BLOQUEO DE NAVEGADOR
+        ort.env.wasm.numThreads = 1;
+        ort.env.wasm.simd = false;
+        ort.env.wasm.proxy = true; // Esto ayuda con el bloqueo de "Tracking Prevention"
 
         const response = await fetch('./quantum_model.onnx?v=' + Date.now());
-        if (!response.ok) throw new Error("Archivo no encontrado");
+        if (!response.ok) throw new Error("GitHub no entregó el archivo");
         const arrayBuffer = await response.arrayBuffer();
 
-        // Crear la sesión con configuración de compatibilidad total
+        // Carga el modelo
         ortSession = await ort.InferenceSession.create(arrayBuffer, {
-            executionProviders: ['wasm'],
-            graphOptimizationLevel: 'all'
+            executionProviders: ['wasm']
         });
 
         conf.innerText = "IA: ONLINE";
         conf.style.color = "#238636";
-        console.log("✅ IA Cargada con éxito");
+        console.log("🚀 Sistema sincronizado y operando.");
     } catch (e) {
-        console.error("Error Crítico:", e);
-        conf.innerText = "REINTENTANDO CONEXIÓN...";
-        // Reintento automático en 2 segundos si falla
-        setTimeout(loadModel, 2000);
+        console.error("Error:", e);
+        conf.innerText = "ERROR DE COMPATIBILIDAD (REVISA CONSOLA)";
+        conf.style.color = "#da3633";
     }
 }
 
@@ -319,6 +318,7 @@ async function loadModel() {
 </script>
 </body>
 </html>
+
 
 
 
