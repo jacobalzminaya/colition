@@ -1,361 +1,334 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quantum Alpha PRO v19.7 | High Alert</title>
-    <style>
-        :root {
-            --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
-            --up: #238636; --down: #da3633; --text: #c9d1d9; --gold: #f1e05a;
-            --noise: #d29922; --flex-on: #8957e5; --neutral: #30363d;
-            --alert: #ff00ff; /* Color para alertas críticas */
-        }
-        body { 
-            background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; 
-            display: flex; justify-content: center; align-items: center; min-height: 100vh; 
-            margin: 0; padding: 10px; overflow: hidden;
-            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-        }
-        * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quantum Alpha PRO v19.7 | Clean & Minimal</title>
+    <style>
+        :root {
+            --bg-color: #0d1117; --panel-bg: #161b22; --accent: #58a6ff;
+            --up: #238636; --down: #da3633; --text: #c9d1d9; --gold: #f1e05a;
+            --noise: #d29922; --flex-on: #8957e5; --neutral: #30363d;
+        }
+        body { 
+            background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', sans-serif; 
+            display: flex; justify-content: center; align-items: center; min-height: 100vh; 
+            margin: 0; padding: 10px; overflow: hidden;
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+        }
+        * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
-        .terminal { 
-            background: var(--panel-bg); width: 100%; max-width: 480px; border: 1px solid var(--neutral); border-radius: 16px; padding: 20px; 
-            box-shadow: 0 25px 50px rgba(0,0,0,0.9); position: relative; transition: all 0.2s ease-in-out;
-        }
+        .terminal { 
+            background: var(--panel-bg); width: 100%; max-width: 480px; border: 1px solid var(--neutral); border-radius: 16px; padding: 20px; 
+            box-shadow: 0 25px 50px rgba(0,0,0,0.9); position: relative; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
 
-        /* Animación de Escándalo para Alta Probabilidad */
-        @keyframes alert-pulse {
-            0% { box-shadow: 0 0 0px var(--gold); transform: scale(1); }
-            50% { box-shadow: 0 0 60px var(--gold); transform: scale(1.02); }
-            100% { box-shadow: 0 0 0px var(--gold); transform: scale(1); }
-        }
+        /* Barra de Probabilidad */
+        #heatmap-bar { width: 100%; height: 4px; background: var(--neutral); margin-bottom: 20px; border-radius: 2px; overflow: hidden; }
+        #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.6s ease; }
 
-        .high-alert-active {
-            animation: alert-pulse 0.5s infinite;
-            border: 4px solid var(--gold) !important;
-        }
+        /* Contenedores Compactos */
+        .selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .time-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+        .risk-selector { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+        
+        .btn { 
+            background: #21262d; border: 1px solid #30363d; color: #8b949e; 
+            padding: 10px 2px; border-radius: 6px; cursor: pointer; 
+            font-size: 0.7rem; text-align: center; font-weight: bold; transition: 0.2s;
+        }
+        .btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 10px rgba(88, 166, 255, 0.3); }
+        .btn-flex { border-color: var(--flex-on); color: var(--flex-on); }
+        .btn-flex.active { background: var(--flex-on) !important; color: white !important; }
 
-        #heatmap-bar { width: 100%; height: 6px; background: var(--neutral); margin-bottom: 20px; border-radius: 3px; overflow: hidden; }
-        #heatmap-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.4s ease; }
+        #mouseBtn { width:100%; padding:14px; margin-bottom:15px; border-radius:10px; cursor:pointer; background:#21262d; color:var(--gold); font-weight:800; border:1px solid var(--gold); letter-spacing: 1px; }
+        #mouse-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; cursor: crosshair; background: rgba(0,0,0,0.01); }
 
-        .selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .time-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-        .risk-selector { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
-        
-        .btn { 
-            background: #21262d; border: 1px solid #30363d; color: #8b949e; 
-            padding: 10px 2px; border-radius: 6px; cursor: pointer; 
-            font-size: 0.7rem; text-align: center; font-weight: bold; transition: 0.2s;
-        }
-        .btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-        .btn-flex { border-color: var(--flex-on); color: var(--flex-on); }
-        .btn-flex.active { background: var(--flex-on) !important; color: white !important; }
+        /* Monitor Central Focalizado */
+        .monitor { background: #010409; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 15px; border: 1px solid #30363d; position: relative; }
+        #last-sequence { font-size: 2.6rem; letter-spacing: 12px; font-family: 'Consolas', monospace; color: #fff; display: block; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
+        
+        .indicators { margin-top: 15px; display: flex; justify-content: space-around; border-top: 1px solid #161b22; padding-top: 10px; }
+        #speed-meter, #noise-index { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        #speed-meter { color: var(--gold); }
+        #noise-index { color: var(--noise); }
 
-        #mouseBtn { width:100%; padding:14px; margin-bottom:15px; border-radius:10px; cursor:pointer; background:#21262d; color:var(--gold); font-weight:800; border:1px solid var(--gold); letter-spacing: 1px; }
-        #mouse-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; cursor: crosshair; background: rgba(0,0,0,0.01); }
+        /* Mensajes de Operación */
+        #op-status { font-weight: 900; font-size: 1.8rem; text-align: center; display: block; margin: 15px 0 5px 0; color: #fff; text-transform: uppercase; }
+        #op-confidence { font-size: 0.8rem; color: #8b949e; text-align: center; display: block; min-height: 45px; margin-bottom: 10px; }
+        
+        #smart-stake { background: rgba(88, 166, 255, 0.05); border-radius: 8px; padding: 12px; margin-bottom: 15px; text-align: center; font-size: 0.85rem; color: var(--accent); border: 1px dashed rgba(88, 166, 255, 0.4); display: none; }
 
-        .monitor { background: #010409; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 15px; border: 1px solid #30363d; position: relative; }
-        #last-sequence { font-size: 2.6rem; letter-spacing: 12px; font-family: 'Consolas', monospace; color: #fff; display: block; }
-        
-        .indicators { margin-top: 15px; display: flex; justify-content: space-around; border-top: 1px solid #161b22; padding-top: 10px; }
-        #speed-meter, #noise-index { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
-        #speed-meter { color: var(--gold); }
-        #noise-index { color: var(--noise); }
+        /* Feedback y Stats */
+        .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .feed-btn { padding: 16px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; opacity: 0.1; pointer-events: none; transition: 0.4s; font-size: 1rem; letter-spacing: 1px; }
+        .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
 
-        #op-status { font-weight: 900; font-size: 2.2rem; text-align: center; display: block; margin: 15px 0 5px 0; color: #fff; text-transform: uppercase; }
-        #op-confidence { font-size: 0.9rem; font-weight: bold; color: #8b949e; text-align: center; display: block; min-height: 45px; margin-bottom: 10px; }
-        
-        /* Gestión de Capital Visual */
-        #smart-stake { 
-            border-radius: 8px; padding: 15px; margin-bottom: 15px; text-align: center; 
-            font-size: 1rem; font-weight: 900; display: none;
-            text-transform: uppercase;
-        }
-        .stake-high { background: var(--gold); color: #000 !important; border: none !important; box-shadow: 0 0 20px var(--gold); }
-        .stake-low { background: rgba(88, 166, 255, 0.1); color: var(--accent); border: 1px dashed var(--accent); }
+        .session-log { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; display: flex; justify-content: space-around; border: 1px solid #30363d; }
+        .stat-card { text-align: center; }
+        .stat-label { font-size: 0.6rem; color: #8b949e; text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .stat-val { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
 
-        .feedback-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .feed-btn { padding: 16px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; opacity: 0.1; pointer-events: none; transition: 0.4s; font-size: 1rem; }
-        .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: scale(1.05); }
+        /* Manual Buttons */
+        .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .touch-btn { padding: 16px; border-radius: 10px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .touch-up { border-bottom: 4px solid var(--up); }
+        .touch-down { border-bottom: 4px solid var(--down); }
+        .touch-btn:active { transform: scale(0.96); }
 
-        .session-log { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; display: flex; justify-content: space-around; border: 1px solid #30363d; }
-        .stat-card { text-align: center; }
-        .stat-label { font-size: 0.6rem; color: #8b949e; text-transform: uppercase; }
-        .stat-val { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+        /* Export & Reset */
+        .admin-btns { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 15px; }
+        .btn-action { padding: 10px; background: #21262d; color: var(--text); border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: bold; }
+        .btn-reset { color: var(--down); }
 
-        .manual-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .touch-btn { padding: 16px; border-radius: 10px; border: 1px solid #30363d; background: #21262d; color: white; font-weight: bold; cursor: pointer; }
-        .touch-up { border-bottom: 4px solid var(--up); }
-        .touch-down { border-bottom: 4px solid var(--down); }
-
-        /* Estados de Alerta */
-        .term-up { background: #062a14 !important; border-color: var(--up) !important; }
-        .term-down { background: #320a0a !important; border-color: var(--down) !important; }
-        .term-noise { background: #1a1a1a !important; border-color: var(--noise) !important; opacity: 0.6; }
-        .danger-zone { color: var(--down) !important; font-weight: 900; }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/ort.min.js"></script>
+        /* Estados de Alerta Visual */
+        .conf-high { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(241, 224, 90, 0.25); }
+        .term-up { background: #062a14 !important; border-color: var(--up) !important; }
+        .term-down { background: #320a0a !important; border-color: var(--down) !important; }
+        .term-noise { background: #211d12 !important; border-color: var(--noise) !important; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/ort.min.js"></script>
 </head>
 <body>
 
 <div id="mouse-overlay"></div>
 
 <div class="terminal" id="main-terminal">
-    <div id="heatmap-bar"><div id="heatmap-fill"></div></div>
-    
-    <div class="selectors">
-        <div class="time-selector">
-            <button class="btn" onclick="setTime(3, this)">3S</button>
-            <button class="btn" onclick="setTime(5, this)">5S</button>
-            <button class="btn active" onclick="setTime(10, this)">10S</button>
-            <button class="btn" onclick="setTime(15, this)">15S</button>
-            <button class="btn" onclick="setTime(30, this)">30S</button>
-            <button class="btn" onclick="setTime(60, this)">1M</button>
-        </div>
-        <div class="risk-selector">
-            <button class="btn" onclick="setRisk(1, this)">N1</button>
-            <button class="btn active" onclick="setRisk(2, this)">N2</button>
-            <button class="btn" onclick="setRisk(3, this)">N3</button>
-            <button id="flexBtn" class="btn btn-flex" onclick="toggleFlexMode()">FLEX OFF</button>
-        </div>
-    </div>
+    <div id="heatmap-bar"><div id="heatmap-fill"></div></div>
+    
+    <div class="selectors">
+        <div class="time-selector">
+            <button class="btn" onclick="setTime(3, this)">3S</button>
+            <button class="btn" onclick="setTime(5, this)">5S</button>
+            <button class="btn active" onclick="setTime(10, this)">10S</button>
+            <button class="btn" onclick="setTime(15, this)">15S</button>
+            <button class="btn" onclick="setTime(30, this)">30S</button>
+            <button class="btn" onclick="setTime(60, this)">1M</button>
+        </div>
+        <div class="risk-selector">
+            <button class="btn" onclick="setRisk(1, this)">N1</button>
+            <button class="btn active" onclick="setRisk(2, this)">N2</button>
+            <button class="btn" onclick="setRisk(3, this)">N3</button>
+            <button id="flexBtn" class="btn btn-flex" onclick="toggleFlexMode()">FLEX OFF</button>
+        </div>
+    </div>
 
-    <button id="mouseBtn" onclick="toggleMouse()">ACTIVAR SENSOR RADAR</button>
+    <button id="mouseBtn" onclick="toggleMouse()">ACTIVAR SENSOR RADAR</button>
 
-    <div class="monitor">
-        <span id="last-sequence">---</span>
-        <div class="indicators">
-            <span id="speed-meter">SPEED: 0ms</span>
-            <span id="noise-index">NOISE: 0%</span>
-        </div>
-    </div>
+    <div class="monitor">
+        <span id="last-sequence">---</span>
+        <div class="indicators">
+            <span id="speed-meter">SPEED: 0ms</span>
+            <span id="noise-index">NOISE: 0%</span>
+        </div>
+    </div>
 
-    <span id="op-status">IDLE</span>
-    <div id="op-confidence">SISTEMA EN ESPERA</div>
-    
-    <div id="smart-stake">GESTIÓN INTELIGENTE</div>
+    <span id="op-status">IDLE</span>
+    <div id="op-confidence">SISTEMA EN ESPERA</div>
+    
+    <div id="smart-stake">GESTIÓN INTELIGENTE ACTIVADA</div>
 
-    <div class="feedback-container">
-        <button id="winBtn" class="feed-btn" style="background:var(--up)" onclick="logResult(true)">WIN</button>
-        <button id="lossBtn" class="feed-btn" style="background:var(--down)" onclick="logResult(false)">LOSS</button>
-    </div>
+    <div class="feedback-container">
+        <button id="winBtn" class="feed-btn" style="background:var(--up)" onclick="logResult(true)">WIN</button>
+        <button id="lossBtn" class="feed-btn" style="background:var(--down)" onclick="logResult(false)">LOSS</button>
+    </div>
 
-    <div class="session-log">
-        <div class="stat-card"><span class="stat-label">Total Trades</span><span id="stat-total" class="stat-val">0</span></div>
-        <div class="stat-card"><span class="stat-label">Accuracy</span><span id="stat-winrate" class="stat-val">0%</span></div>
-    </div>
+    <div class="session-log">
+        <div class="stat-card"><span class="stat-label">Total Trades</span><span id="stat-total" class="stat-val">0</span></div>
+        <div class="stat-card"><span class="stat-label">Accuracy</span><span id="stat-winrate" class="stat-val">0%</span></div>
+    </div>
 
-    <div class="manual-controls">
-        <button class="touch-btn touch-up" onclick="injectManual('A')">CALL (A)</button>
-        <button class="touch-btn touch-down" onclick="injectManual('B')">PUT (B)</button>
-    </div>
+    <div class="manual-controls">
+        <button class="touch-btn touch-up" onclick="injectManual('A')">CALL (A)</button>
+        <button class="touch-btn touch-down" onclick="injectManual('B')">PUT (B)</button>
+    </div>
 
-    <div class="admin-btns" style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 15px;">
-        <button class="btn" style="font-size: 0.6rem;" onclick="exportData()">EXPORTAR (CSV)</button>
-        <button class="btn" style="font-size: 0.6rem; color: var(--down);" onclick="resetAllData()">RESET</button>
-    </div>
+    <div class="admin-btns">
+        <button class="btn-action" onclick="exportData()">EXPORTAR DATOS (CSV)</button>
+        <button class="btn-action btn-reset" onclick="resetAllData()">RESET</button>
+    </div>
 </div>
 
 <script>
-    document.addEventListener('contextmenu', e => e.preventDefault());
+    // BLOQUEO TOTAL DE MENÚ CONTEXTUAL
+    document.addEventListener('contextmenu', e => e.preventDefault());
 
-    let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
-    let lastClickTime = 0, lastSignalTime = 0, lastManualInjectionTime = 0;
-    let riskLevel = 2, lastSignalData = null, ortSession = null;
+    let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
+    let lastClickTime = 0, lastSignalTime = 0, lastManualInjectionTime = 0;
+    let riskLevel = 2, lastSignalData = null, ortSession = null;
 
-    const minRachaByLevel = {1: 3, 2: 4, 3: 5};
-    const noiseThresholdByLevel = {1: 65, 2: 55, 3: 50};
+    const minRachaByLevel = {1: 3, 2: 4, 3: 5};
+    const noiseThresholdByLevel = {1: 65, 2: 55, 3: 50};
 
-    async function loadModel() {
-        if (ortSession) return;
-        try {
-            ort.env.wasm.numThreads = 1;
-            const response = await fetch('./quantum_model.onnx?v=' + Date.now());
-            const buffer = await response.arrayBuffer();
-            ortSession = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
-            document.getElementById('op-confidence').innerText = "IA: CONECTADA";
-        } catch (e) {
-            document.getElementById('op-confidence').innerText = "IA: MODO LOCAL";
-        }
-    }
+    async function loadModel() {
+        if (ortSession) return;
+        try {
+            ort.env.wasm.numThreads = 1;
+            const response = await fetch('./quantum_model.onnx?v=' + Date.now());
+            const buffer = await response.arrayBuffer();
+            ortSession = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
+            document.getElementById('op-confidence').innerText = "IA: CONECTADA";
+        } catch (e) {
+            document.getElementById('op-confidence').innerText = "IA: MODO LOCAL";
+        }
+    }
 
-    function setRisk(level, button) {
-        riskLevel = level;
-        document.querySelectorAll('.risk-selector .btn:not(.btn-flex)').forEach(b => b.classList.remove('active'));
-        button.classList.add('active');
-        if(sequence.length > 0) analyze();
-    }
+    function setRisk(level, button) {
+        riskLevel = level;
+        document.querySelectorAll('.risk-selector .btn:not(.btn-flex)').forEach(b => b.classList.remove('active'));
+        button.classList.add('active');
+        if(sequence.length > 0) analyze();
+    }
 
-    function toggleFlexMode() {
-        flexMode = !flexMode;
-        const btn = document.getElementById('flexBtn');
-        btn.classList.toggle('active');
-        btn.innerText = flexMode ? "FLEX ON" : "FLEX OFF";
-        if(sequence.length > 0) analyze();
-    }
+    function toggleFlexMode() {
+        flexMode = !flexMode;
+        const btn = document.getElementById('flexBtn');
+        btn.classList.toggle('active');
+        btn.innerText = flexMode ? "FLEX ON" : "FLEX OFF";
+        if(sequence.length > 0) analyze();
+    }
 
-    function setTime(s, button) {
-        document.querySelectorAll('.time-selector .btn').forEach(b => b.classList.remove('active'));
-        button.classList.add('active');
-        sequence = []; resetUI();
-    }
+    function setTime(s, button) {
+        document.querySelectorAll('.time-selector .btn').forEach(b => b.classList.remove('active'));
+        button.classList.add('active');
+        sequence = []; resetUI();
+    }
 
-    function toggleMouse() {
-        mouseEnabled = !mouseEnabled;
-        document.getElementById('mouse-overlay').style.display = mouseEnabled ? "block" : "none";
-        const btn = document.getElementById('mouseBtn');
-        btn.style.background = mouseEnabled ? "var(--gold)" : "#21262d";
-        btn.style.color = mouseEnabled ? "#000" : "var(--gold)";
-        if (mouseEnabled) loadModel();
-        if(!mouseEnabled) resetUI();
-    }
+    function toggleMouse() {
+        mouseEnabled = !mouseEnabled;
+        document.getElementById('mouse-overlay').style.display = mouseEnabled ? "block" : "none";
+        const btn = document.getElementById('mouseBtn');
+        btn.style.background = mouseEnabled ? "var(--gold)" : "#21262d";
+        btn.style.color = mouseEnabled ? "#000" : "var(--gold)";
+        if (mouseEnabled) loadModel();
+        if(!mouseEnabled) resetUI();
+    }
 
-    function injectManual(side) {
-        const now = Date.now();
-        if (now - lastManualInjectionTime < 150) return;
-        lastManualInjectionTime = now;
-        if(navigator.vibrate) navigator.vibrate(30);
-        const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
-        lastClickTime = now;
-        sequence.push({ val: side, diff: diff });
-        if(sequence.length > 12) sequence.shift();
-        analyze();
-    }
+    function injectManual(side) {
+        const now = Date.now();
+        if (now - lastManualInjectionTime < 150) return;
+        lastManualInjectionTime = now;
+        if(navigator.vibrate) navigator.vibrate(30);
+        const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
+        lastClickTime = now;
+        sequence.push({ val: side, diff: diff });
+        if(sequence.length > 12) sequence.shift();
+        analyze();
+    }
 
-    document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const now = Date.now();
-        const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
-        lastClickTime = now;
-        let val = (e.button === 0) ? 'A' : (e.button === 2 ? 'B' : "");
-        if(val !== "") {
-            sequence.push({val, diff});
-            if(sequence.length > 12) sequence.shift();
-            analyze();
-        }
-    });
+    document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const now = Date.now();
+        const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
+        lastClickTime = now;
+        let val = (e.button === 0) ? 'A' : (e.button === 2 ? 'B' : "");
+        if(val !== "") {
+            sequence.push({val, diff});
+            if(sequence.length > 12) sequence.shift();
+            analyze();
+        }
+    });
 
-    async function analyze() {
-        const seqStr = sequence.map(s => s.val).join('');
-        const terminal = document.getElementById('main-terminal');
-        const confElement = document.getElementById('op-confidence');
-        const heatmap = document.getElementById('heatmap-fill');
-        const stakeDiv = document.getElementById('smart-stake');
-        const statusElement = document.getElementById('op-status');
-        
-        document.getElementById('last-sequence').innerText = seqStr || '---';
+    async function analyze() {
+        const seqStr = sequence.map(s => s.val).join('');
+        const terminal = document.getElementById('main-terminal');
+        const confElement = document.getElementById('op-confidence');
+        const heatmap = document.getElementById('heatmap-fill');
+        const stakeDiv = document.getElementById('smart-stake');
+        
+        document.getElementById('last-sequence').innerText = seqStr || '---';
 
-        const oscillationCount = (seqStr.match(/AB|BA/g) || []).length;
-        const noiseIndex = Math.min(100, Math.round((oscillationCount / Math.max(1, seqStr.length - 1)) * 120));
-        const recentAvgSpeed = sequence.slice(-5).reduce((acc, s) => acc + s.diff, 0) / Math.max(1, sequence.slice(-5).length);
+        const oscillationCount = (seqStr.match(/AB|BA/g) || []).length;
+        const noiseIndex = Math.min(100, Math.round((oscillationCount / Math.max(1, seqStr.length - 1)) * 120));
+        const recentAvgSpeed = sequence.slice(-5).reduce((acc, s) => acc + s.diff, 0) / Math.max(1, sequence.slice(-5).length);
 
-        document.getElementById('speed-meter').innerText = `SPEED: ${Math.round(recentAvgSpeed)}ms`;
-        document.getElementById('noise-index').innerText = `NOISE: ${noiseIndex}%`;
+        document.getElementById('speed-meter').innerText = `SPEED: ${Math.round(recentAvgSpeed)}ms`;
+        document.getElementById('noise-index').innerText = `NOISE: ${noiseIndex}%`;
 
-        let noiseMax = noiseThresholdByLevel[riskLevel] + (flexMode ? 15 : 0);
-        const isChoppy = noiseIndex > noiseMax;
-        const minR = minRachaByLevel[riskLevel];
-        
-        let type = null, strength = 0;
-        if (new RegExp('A{' + minR + ',}').test(seqStr) && !isChoppy) {
-            type = "COMPRA";
-            strength = (seqStr.slice(-6).match(/A/g) || []).length + (recentAvgSpeed < 300 ? 3 : 1);
-        } else if (new RegExp('B{' + minR + ',}').test(seqStr) && !isChoppy) {
-            type = "VENTA";
-            strength = (seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 300 ? 3 : 1);
-        }
+        let noiseMax = noiseThresholdByLevel[riskLevel] + (flexMode ? 15 : 0);
+        const isChoppy = noiseIndex > noiseMax;
+        const minR = minRachaByLevel[riskLevel];
+        
+        let type = null, strength = 0;
+        if (new RegExp('A{' + minR + ',}').test(seqStr) && !isChoppy) {
+            type = "COMPRA";
+            strength = (seqStr.slice(-6).match(/A/g) || []).length + (recentAvgSpeed < 300 ? 3 : 1);
+        } else if (new RegExp('B{' + minR + ',}').test(seqStr) && !isChoppy) {
+            type = "VENTA";
+            strength = (seqStr.slice(-6).match(/B/g) || []).length + (recentAvgSpeed < 300 ? 3 : 1);
+        }
 
-        let iaProb = 0;
-        if (type) {
-            if (ortSession) {
-                try {
-                    const inputTensor = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode ? 1 : 0]), [1, 4]);
-                    const results = await ortSession.run({ input: inputTensor });
-                    iaProb = results.prob_win.data[0];
-                } catch (e) { iaProb = strength / 10; }
-            } else { iaProb = strength / 10; }
+        let iaProb = 0;
+        if (type) {
+            if (ortSession) {
+                try {
+                    const inputTensor = new ort.Tensor('float32', new Float32Array([strength, noiseIndex, riskLevel, flexMode ? 1 : 0]), [1, 4]);
+                    const results = await ortSession.run({ input: inputTensor });
+                    iaProb = results.prob_win.data[0];
+                } catch (e) { iaProb = strength / 10; }
+            } else { iaProb = strength / 10; }
 
-            heatmap.style.width = (iaProb * 100) + "%";
-            heatmap.style.background = type === "COMPRA" ? "var(--up)" : "var(--down)";
-            stakeDiv.style.display = "block";
+            confElement.innerText = `FUERZA: ${strength.toFixed(1)} | IA: ${Math.round(iaProb * 100)}%`;
+            heatmap.style.width = (iaProb * 100) + "%";
+            heatmap.style.background = type === "COMPRA" ? "var(--up)" : "var(--down)";
+            stakeDiv.style.display = "block";
+            stakeDiv.innerHTML = iaProb > 0.8 ? "🔥 <strong>ALTA CONFIANZA:</strong> 5% BAL" : "⚖️ <strong>MODERADO:</strong> 2% BAL";
+        } else {
+            heatmap.style.width = "0%"; stakeDiv.style.display = "none";
+            confElement.innerText = "ESPERANDO PATRÓN...";
+        }
 
-            // LÓGICA DE ESCÁNDALO Y ADVERTENCIA
-            if (iaProb >= 0.8) {
-                terminal.classList.add('high-alert-active');
-                confElement.innerHTML = `<span style="color:var(--gold)">¡PROBABILIDAD EXTREMA! ${Math.round(iaProb * 100)}%</span>`;
-                stakeDiv.className = "stake-high";
-                stakeDiv.innerHTML = "🔥 INVERTIR AHORA: ALTA CONFIANZA";
-                if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
-            } else {
-                terminal.classList.remove('high-alert-active');
-                confElement.innerText = `FUERZA: ${strength.toFixed(1)} | IA: ${Math.round(iaProb * 100)}%`;
-                stakeDiv.className = "stake-low";
-                stakeDiv.innerHTML = "⚖️ RIESGO MEDIO: ENTRADA MODERADA";
-            }
-        } else {
-            terminal.classList.remove('high-alert-active');
-            heatmap.style.width = "0%"; stakeDiv.style.display = "none";
-            
-            if (isChoppy) {
-                statusElement.innerText = "¡EVITAR!";
-                confElement.innerHTML = `<span class="danger-zone">MERCADO RUIDOSO (${noiseIndex}%)</span>`;
-                terminal.className = 'terminal term-noise';
-            } else {
-                statusElement.innerText = "ESPERANDO";
-                confElement.innerText = "IA BUSCANDO PATRONES...";
-                terminal.className = 'terminal';
-            }
-        }
+        if (type && (Date.now() - lastSignalTime > 3000) && strength > 3.5) { 
+            lastSignalTime = Date.now();
+            lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex };
+            terminal.className = 'terminal ' + (type === "COMPRA" ? 'term-up' : 'term-down');
+            if (strength >= 7) terminal.classList.add('conf-high');
+            document.getElementById('op-status').innerText = type;
+            document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
+        } else if (isChoppy) {
+            terminal.className = 'terminal term-noise';
+            document.getElementById('op-status').innerText = "RUIDO ALTO";
+        }
+    }
 
-        if (type && (Date.now() - lastSignalTime > 3000) && strength > 3.5) { 
-            lastSignalTime = Date.now();
-            lastSignalData = { type, strength, risk: riskLevel, noise: noiseIndex };
-            statusElement.innerText = type;
-            document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
-            if (type === "COMPRA") terminal.classList.add('term-up');
-            else terminal.classList.add('term-down');
-        }
-    }
+    function logResult(isWin) {
+        if (!lastSignalData) return;
+        tradeHistory.push({ ...lastSignalData, result: isWin ? 1 : 0, timestamp: new Date().toLocaleTimeString() });
+        localStorage.setItem('quantum_v19_trades', JSON.stringify(tradeHistory));
+        updateStats(); sequence = []; resetUI();
+    }
 
-    function logResult(isWin) {
-        if (!lastSignalData) return;
-        tradeHistory.push({ ...lastSignalData, result: isWin ? 1 : 0, timestamp: new Date().toLocaleTimeString() });
-        localStorage.setItem('quantum_v19_trades', JSON.stringify(tradeHistory));
-        updateStats(); sequence = []; resetUI();
-    }
+    function updateStats() {
+        const total = tradeHistory.length;
+        const wins = tradeHistory.filter(t => t.result === 1).length;
+        document.getElementById('stat-total').innerText = total;
+        document.getElementById('stat-winrate').innerText = total > 0 ? Math.round((wins / total) * 100) + "%" : "0%";
+    }
 
-    function updateStats() {
-        const total = tradeHistory.length;
-        const wins = tradeHistory.filter(t => t.result === 1).length;
-        document.getElementById('stat-total').innerText = total;
-        document.getElementById('stat-winrate').innerText = total > 0 ? Math.round((wins / total) * 100) + "%" : "0%";
-    }
+    function resetAllData() {
+        if (confirm("¿Reiniciar sesión?")) { tradeHistory = []; updateStats(); resetUI(); }
+    }
 
-    function resetAllData() {
-        if (confirm("¿Reiniciar sesión?")) { tradeHistory = []; updateStats(); resetUI(); }
-    }
+    function resetUI() {
+        document.getElementById('op-status').innerText = mouseEnabled ? "RADAR ON" : "IDLE";
+        document.getElementById('main-terminal').className = 'terminal';
+        document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
+        document.getElementById('heatmap-fill').style.width = "0%";
+        lastSignalData = null;
+    }
 
-    function resetUI() {
-        document.getElementById('op-status').innerText = mouseEnabled ? "RADAR ON" : "IDLE";
-        document.getElementById('main-terminal').className = 'terminal';
-        document.getElementById('main-terminal').classList.remove('high-alert-active');
-        document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
-        document.getElementById('heatmap-fill').style.width = "0%";
-        lastSignalData = null;
-    }
-
-    function exportData() {
-        if (tradeHistory.length === 0) return;
-        let csv = "Tipo,Fuerza,Ruido,Resultado,Hora\n";
-        tradeHistory.forEach(t => csv += `${t.type},${t.strength},${t.noise},${t.result},${t.timestamp}\n`);
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
-        a.download = `session_quantum.csv`; a.click();
-    }
-    
-    const saved = localStorage.getItem('quantum_v19_trades');
-    if(saved) { tradeHistory = JSON.parse(saved); updateStats(); }
+    function exportData() {
+        if (tradeHistory.length === 0) return;
+        let csv = "Tipo,Fuerza,Ruido,Resultado,Hora\n";
+        tradeHistory.forEach(t => csv += `${t.type},${t.strength},${t.noise},${t.result},${t.timestamp}\n`);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
+        a.download = `session_quantum.csv`; a.click();
+    }
+    
+    // Auto-load stats
+    const saved = localStorage.getItem('quantum_v19_trades');
+    if(saved) { tradeHistory = JSON.parse(saved); updateStats(); }
 </script>
 </body>
 </html>
