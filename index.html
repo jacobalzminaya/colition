@@ -221,7 +221,7 @@
         const now = Date.now();
         const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
         lastClickTime = now;
-        let val = (e.button === 0) ? 'B' : (e.button === 2 ? 'A' : "");
+        let val = (e.button === 0) ? 'A' : (e.button === 2 ? 'B' : "");
         if(val !== "") {
             sequence.push({val, diff});
             if(sequence.length > 12) sequence.shift();
@@ -332,3 +332,4 @@
 </script>
 </body>
 </html>
+
