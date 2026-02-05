@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quantum Alpha PRO v22 | Full Logic Corregido</title>
+    <title>Quantum Alpha PRO v22 | Full Logic Fixed</title>
     <style>
         :root {
             --bg-color: #040508;
@@ -35,7 +35,7 @@
             inset: 0;
             z-index: 1;
             cursor: crosshair;
-            background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.5) 100%);
+            background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.4) 100%);
         }
         #mouse-overlay.active-radar { display: block; pointer-events: auto; }
 
@@ -49,7 +49,7 @@
             position: relative;
             z-index: 10;
             box-shadow: 0 40px 80px rgba(0,0,0,0.7);
-            transition: border 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .header-info {
@@ -64,39 +64,43 @@
 
         .selectors-grid {
             display: grid;
-            grid-template-columns: 1.5fr 1fr;
-            gap: 10px;
+            grid-template-columns: 1.5fr 1.1fr;
+            gap: 12px;
             margin-bottom: 15px;
         }
 
-        .btn-group { display: flex; gap: 3px; flex-wrap: wrap; }
+        .btn-group { display: flex; gap: 4px; flex-wrap: wrap; }
+        
         .btn {
             background: #161b22;
             border: 1px solid var(--border);
             color: var(--text-dim);
-            padding: 8px 4px;
-            border-radius: 5px;
+            padding: 8px 2px;
+            border-radius: 6px;
             font-size: 10px;
             font-weight: 800;
             cursor: pointer;
             flex: 1;
+            min-width: 35px;
             transition: 0.2s;
         }
-        .btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+        
+        /* Estado Activo por Grupos */
+        .btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 10px rgba(74, 144, 226, 0.3); }
         .btn-flex { border-color: #8957e5; color: #8957e5; }
-        .btn-flex.active { background: #8957e5; color: white; box-shadow: 0 0 10px rgba(137, 87, 229, 0.4); }
+        .btn-flex.active { background: #8957e5; color: white; border-color: #8957e5; box-shadow: 0 0 12px rgba(137, 87, 229, 0.5); }
 
         .input-track {
-            background: rgba(0,0,0,0.4);
-            height: 35px;
-            border-radius: 8px;
+            background: rgba(0,0,0,0.5);
+            height: 40px;
+            border-radius: 10px;
             margin-bottom: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            font-size: 18px;
-            border: 1px solid #1c2128;
+            font-size: 20px;
+            border: 1px solid var(--border);
         }
 
         .signal-zone {
@@ -111,14 +115,14 @@
             border: 1px solid rgba(255,255,255,0.05);
         }
 
-        #big-icon { font-size: 80px; font-weight: bold; display: none; line-height: 1; }
-        #op-status { font-size: 1.8rem; font-weight: 900; margin-top: 5px; }
-        #op-details { font-size: 11px; color: var(--accent); margin-top: 5px; font-weight: 600; }
+        #big-icon { font-size: 70px; font-weight: bold; display: none; line-height: 1; transition: 0.2s; }
+        #op-status { font-size: 1.6rem; font-weight: 900; margin-top: 5px; letter-spacing: 1px; }
+        #op-details { font-size: 10px; color: var(--accent); margin-top: 5px; font-weight: 700; text-transform: uppercase; }
 
         #mouseBtn {
             width: 100%;
-            padding: 12px;
-            border-radius: 10px;
+            padding: 14px;
+            border-radius: 12px;
             border: 2px solid var(--accent);
             background: transparent;
             color: var(--accent);
@@ -126,14 +130,15 @@
             cursor: pointer;
             margin-bottom: 15px;
             text-transform: uppercase;
+            letter-spacing: 1px;
             transition: 0.3s;
         }
-        #mouseBtn.radar-on { background: var(--accent); color: white; }
+        #mouseBtn.radar-on { background: var(--accent); color: white; box-shadow: 0 0 20px rgba(74, 144, 226, 0.4); }
 
         #ia-report {
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.4);
             border-radius: 10px;
-            padding: 10px;
+            padding: 12px;
             font-size: 11px;
             margin-bottom: 15px;
             border-left: 4px solid var(--border);
@@ -141,22 +146,23 @@
 
         .feedback-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .feed-btn {
-            padding: 14px;
+            padding: 15px;
             border-radius: 10px;
             color: white;
             font-weight: 900;
             cursor: pointer;
-            opacity: 0.15;
+            opacity: 0.1;
             pointer-events: none;
             border: none;
-            transition: 0.3s;
+            transition: 0.4s;
         }
-        .active-signal { opacity: 1; pointer-events: auto; transform: scale(1.02); }
+        .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: translateY(-2px); }
 
-        .text-up { color: var(--up-neon); text-shadow: 0 0 10px rgba(0, 255, 136, 0.4); }
-        .text-down { color: var(--down-neon); text-shadow: 0 0 10px rgba(255, 46, 99, 0.4); }
-        .border-up { border-color: var(--up-neon) !important; box-shadow: 0 0 20px rgba(0, 255, 136, 0.1); }
-        .border-down { border-color: var(--down-neon) !important; box-shadow: 0 0 20px rgba(255, 46, 99, 0.1); }
+        /* Clases Dinámicas de Señal */
+        .text-up { color: var(--up-neon) !important; text-shadow: 0 0 15px rgba(0, 255, 136, 0.5); }
+        .text-down { color: var(--down-neon) !important; text-shadow: 0 0 15px rgba(255, 46, 99, 0.5); }
+        .border-up { border-color: var(--up-neon) !important; box-shadow: 0 0 30px rgba(0, 255, 136, 0.15); }
+        .border-down { border-color: var(--down-neon) !important; box-shadow: 0 0 30px rgba(255, 46, 99, 0.15); }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -187,7 +193,7 @@
     </div>
 
     <div class="input-track" id="live-track">
-        <span style="color: var(--text-dim); font-size: 10px;">ESPERANDO ENTRADA...</span>
+        <span style="color: var(--text-dim); font-size: 10px;">ESPERANDO FLUJO...</span>
     </div>
 
     <button id="mouseBtn" onclick="toggleMouse()">INICIAR SENSOR RADAR</button>
@@ -195,7 +201,7 @@
     <div class="signal-zone">
         <div id="big-icon"></div>
         <div id="op-status">SISTEMA IDLE</div>
-        <div id="op-details">MODO: ESTÁNDAR</div>
+        <div id="op-details">MONITORIZANDO MERCADO</div>
     </div>
 
     <div id="ia-report">
@@ -218,7 +224,6 @@
 let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
 let lastClickTime = 0, riskLevel = 2, selectedTime = 10;
 
-// CONFIGURACIÓN DE NIVELES (Corregido: MinRacha y Filtro de Ruido)
 const config = {
     racha: { 1: 3, 2: 4, 3: 5 },
     ruido: { 1: 65, 2: 55, 3: 45 }
@@ -230,11 +235,10 @@ function toggleMouse() {
     const btn = document.getElementById('mouseBtn');
     overlay.classList.toggle('active-radar', mouseEnabled);
     btn.classList.toggle('radar-on', mouseEnabled);
-    btn.innerText = mouseEnabled ? "RADAR ACTIVO (CLICK IZQ/DER)" : "INICIAR SENSOR RADAR";
+    btn.innerText = mouseEnabled ? "SENSOR ACTIVO" : "INICIAR SENSOR RADAR";
     if(!mouseEnabled) resetUI();
 }
 
-// CAPTURA DE DATOS (Izquierdo = A / Derecho = B)
 document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
     if (!mouseEnabled) return;
     e.preventDefault();
@@ -243,9 +247,7 @@ document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
     const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
     lastClickTime = now;
 
-    let val = "";
-    if (e.button === 0) val = 'A'; // Compra
-    else if (e.button === 2) val = 'B'; // Venta
+    let val = (e.button === 0) ? 'A' : (e.button === 2 ? 'B' : "");
 
     if(val !== "") {
         sequence.push({val, diff});
@@ -264,30 +266,25 @@ function updateLiveTrack() {
 
 function analyze() {
     const seqStr = sequence.map(s => s.val).join('');
-    
-    // CÁLCULO DE RUIDO (Oscilaciones)
     const oscillations = (seqStr.match(/AB|BA/g) || []).length;
     const noiseIndex = Math.min(100, Math.round((oscillations / Math.max(1, seqStr.length - 1)) * 100));
-    
-    // VELOCIDAD DE ENTRADA
     const recentSpeed = sequence.length > 1 ? sequence[sequence.length-1].diff : 0;
     
     document.getElementById('speed-meter').innerText = `LATENCIA: ${recentSpeed}ms`;
     document.getElementById('noise-index').innerText = `RUIDO: ${noiseIndex}%`;
 
-    // LÓGICA DE FILTROS (Ajustada por nivel y FLEX)
     let maxAllowedNoise = config.ruido[riskLevel];
-    if (flexMode) maxAllowedNoise += 15; // El modo FLEX relaja el filtro de ruido
+    if (flexMode) maxAllowedNoise += 15;
 
     const minR = config.racha[riskLevel];
     const isChoppy = noiseIndex > maxAllowedNoise;
 
-    // ERROR CORREGIDO: Usamos '$' para asegurar que la racha es lo último que ocurrió
+    // CORRECCIÓN: Usamos '$' para validar solo el final de la racha
     const rachaCompra = new RegExp('A{' + minR + ',}$').test(seqStr);
     const rachaVenta = new RegExp('B{' + minR + ',}$').test(seqStr);
 
     if (isChoppy) {
-        updateStatus("RUIDO ALTO", "FILTRANDO SEÑAL VOLÁTIL", "none");
+        updateStatus("RUIDO ALTO", "FILTRANDO VOLATILIDAD", "none");
     } else if (rachaCompra) {
         showSignal("COMPRA", minR);
     } else if (rachaVenta) {
@@ -304,9 +301,8 @@ function showSignal(type, power) {
     const iaL = document.getElementById('ia-logic');
     const iaS = document.getElementById('ia-stake');
     
-    // Cálculo de probabilidad basado en el tiempo y el riesgo
-    let prob = 70 + (power * 5) - (riskLevel * 2);
-    if(flexMode) prob -= 5;
+    let prob = 72 + (power * 4) - (riskLevel * 2);
+    if(flexMode) prob -= 4;
 
     icon.style.display = "block";
     icon.innerText = type === "COMPRA" ? "▲" : "▼";
@@ -320,8 +316,8 @@ function showSignal(type, power) {
         term.className = "terminal border-down";
     }
 
-    iaL.innerText = `IA: PATRÓN N${riskLevel} DETECTADO | ${selectedTime}S`;
-    iaS.innerText = `CONFIANZA: ${Math.min(98, prob)}% | SUGERIDO: 3-5%`;
+    iaL.innerText = `IA: PATRÓN N${riskLevel} | ${selectedTime}S`;
+    iaS.innerText = `CONFIANZA: ${Math.min(99, prob).toFixed(0)}% | STAKE: 3-5%`;
     
     document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
 }
@@ -334,35 +330,40 @@ function updateStatus(txt, detail, iconDisp) {
 }
 
 function resetUI(clearTrack = true) {
-    updateStatus("SISTEMA IDLE", "ESPERANDO FLUJO DE DATOS", "none");
+    updateStatus("SISTEMA IDLE", flexMode ? "MODO FLEX ACTIVADO" : "MONITORIZANDO MERCADO", "none");
     document.getElementById('op-status').className = "";
     document.getElementById('ia-logic').innerText = "IA: ANALIZANDO...";
     document.getElementById('ia-stake').innerText = "GESTIÓN: SIN OPERACIÓN";
     document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
     if(clearTrack) {
         sequence = [];
-        document.getElementById('live-track').innerHTML = '<span style="color: var(--text-dim); font-size: 10px;">ESPERANDO ENTRADA...</span>';
+        document.getElementById('live-track').innerHTML = '<span style="color: var(--text-dim); font-size: 10px;">ESPERANDO FLUJO...</span>';
     }
 }
 
+// FUNCIONES DE BOTONES CORREGIDAS PARA SER INDEPENDIENTES
 function setTime(s, btn) {
     selectedTime = s;
-    document.querySelectorAll('#time-group .btn').forEach(b => b.classList.remove('active'));
+    const group = document.getElementById('time-group');
+    group.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     resetUI();
 }
 
 function setRisk(l, btn) {
     riskLevel = l;
-    document.querySelectorAll('#risk-group .btn').forEach(b => b.classList.remove('active'));
+    const group = document.getElementById('risk-group');
+    // Solo quitamos 'active' a N1, N2, N3, no al FLEX
+    group.querySelectorAll('.btn:not(.btn-flex)').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    // Al cambiar de riesgo, re-analizamos si hay datos
     if(sequence.length > 0) analyze();
 }
 
 function toggleFlexMode() {
     flexMode = !flexMode;
     document.getElementById('flexBtn').classList.toggle('active');
+    const detail = document.getElementById('op-details');
+    detail.innerText = flexMode ? "MODO FLEX: ALTA TOLERANCIA" : "MONITORIZANDO MERCADO";
     if(sequence.length > 0) analyze();
 }
 
