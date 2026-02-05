@@ -7,7 +7,7 @@
     <style>
         :root {
             --bg-color: #040508;
-            --panel-bg: #0a0d11;
+            --panel-bg: rgba(10, 13, 17, 0.9);
             --up-neon: #00ff88; 
             --down-neon: #ff2e63; 
             --accent: #4a90e2;
@@ -20,7 +20,7 @@
         body {
             background: var(--bg-color);
             color: var(--text-main);
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -28,6 +28,7 @@
             margin: 0;
             overflow: hidden;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #mouse-overlay {
@@ -36,9 +37,9 @@
             inset: 0;
             z-index: 1;
             cursor: crosshair;
-            background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.6) 100%);
+            background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.7) 100%);
         }
-        #mouse-overlay.active-radar { display: block; pointer-events: auto; }
+        #mouse-overlay.active-radar { display: block; }
 
         .terminal {
             background: var(--panel-bg);
@@ -50,7 +51,7 @@
             position: relative;
             z-index: 10;
             box-shadow: 0 40px 80px rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
@@ -61,18 +62,18 @@
             font-weight: 900;
             margin-bottom: 15px;
             color: var(--text-dim);
-            letter-spacing: 1.5px;
+            letter-spacing: 1px;
             text-transform: uppercase;
         }
 
-        /* Canvas Gráfico */
         #flow-chart {
             width: 100%;
-            height: 60px;
-            background: rgba(0,0,0,0.3);
+            height: 80px;
+            background: rgba(0,0,0,0.4);
             border-radius: 12px;
             margin-bottom: 15px;
             border: 1px solid var(--border);
+            display: block;
         }
 
         .selectors-grid {
@@ -115,7 +116,6 @@
             gap: 8px;
             font-size: 22px;
             border: 1px solid var(--border);
-            overflow: hidden;
         }
 
         .signal-zone {
@@ -129,9 +129,10 @@
             margin-bottom: 15px;
             border: 1px solid rgba(255,255,255,0.05);
             position: relative;
+            overflow: hidden;
         }
 
-        #big-icon { font-size: 80px; font-weight: bold; display: none; line-height: 1; z-index: 2; }
+        #big-icon { font-size: 80px; font-weight: bold; display: none; z-index: 2; }
         #op-status { font-size: 1.8rem; font-weight: 900; margin-top: 5px; z-index: 2; }
         #op-details { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; z-index: 2; }
 
@@ -171,14 +172,14 @@
             color: white;
             font-weight: 900;
             cursor: pointer;
-            opacity: 0.05;
+            opacity: 0.1;
             pointer-events: none;
             border: none;
             transition: 0.3s;
         }
         .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: scale(1.02); }
 
-        /* Estados de Neon */
+        /* Estados Pro */
         .text-up { color: var(--up-neon) !important; text-shadow: 0 0 20px rgba(0, 255, 136, 0.6); }
         .text-down { color: var(--down-neon) !important; text-shadow: 0 0 20px rgba(255, 46, 99, 0.6); }
         .border-up { border-color: var(--up-neon) !important; box-shadow: 0 0 40px rgba(0, 255, 136, 0.1); }
@@ -191,7 +192,7 @@
             width: 0%;
             height: 4px;
             background: var(--accent);
-            border-radius: 0 0 20px 20px;
+            transition: width linear;
         }
     </style>
 </head>
@@ -219,7 +220,7 @@
             <button class="btn" onclick="setRisk(1, this)">N1</button>
             <button class="btn active" onclick="setRisk(2, this)">N2</button>
             <button class="btn" onclick="setRisk(3, this)">N3</button>
-            <button id="flexBtn" class="btn btn-flex" style="border-color:#8957e5" onclick="toggleFlexMode()">FLEX</button>
+            <button id="flexBtn" class="btn" style="border-color:#8957e5" onclick="toggleFlexMode()">FLEX</button>
         </div>
     </div>
 
@@ -253,6 +254,7 @@
 </div>
 
 <script>
+// --- ESTADO GLOBAL ---
 let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
 let lastClickTime = 0, riskLevel = 2, selectedTime = 15;
 let isSignalActive = false, countdownInterval = null;
@@ -262,123 +264,150 @@ const config = {
     ruido: { 1: 65, 2: 55, 3: 45 }
 };
 
-// --- AUDIO Y HÁPTICA ---
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playSignalSound(type) {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(type === "COMPRA" ? 880 : 330, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.6);
-    if(navigator.vibrate) navigator.vibrate(type === "COMPRA" ? [30, 10, 30] : [50]);
-}
+// --- AUDIO ENGINE PRO ---
+const AudioEngine = {
+    ctx: null,
+    init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    },
+    async play(type) {
+        this.init();
+        if (this.ctx.state === 'suspended') await this.ctx.resume();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        
+        osc.frequency.setValueAtTime(type === "COMPRA" ? 880 : 330, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
+        
+        osc.start(); osc.stop(this.ctx.currentTime + 0.6);
+        if(navigator.vibrate) navigator.vibrate(type === "COMPRA" ? [30, 10, 30] : [70]);
+    }
+};
 
-// --- LÓGICA DE GRÁFICO (CANVAS) ---
+// --- CANVAS GRAPHIC PRO ---
 const canvas = document.getElementById('flow-chart');
 const ctx = canvas.getContext('2d');
-let chartData = Array(30).fill(30);
+let chartData = Array(40).fill(40);
 
 function drawChart() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.beginPath();
-    ctx.strokeStyle = '#4a90e2';
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
+    if (!mouseEnabled && sequence.length === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
     
-    const step = canvas.width / (chartData.length - 1);
-    chartData.forEach((val, i) => {
-        const x = i * step;
-        const y = canvas.height / 2 + (val * 0.5); // Normalizar
-        if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    requestAnimationFrame(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Grid lines
+        ctx.strokeStyle = 'rgba(74, 144, 226, 0.05)';
+        ctx.lineWidth = 1;
+        for(let i=0; i<canvas.width; i+=25) {
+            ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i, canvas.height); ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.strokeStyle = '#4a90e2';
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        
+        const step = canvas.width / (chartData.length - 1);
+        chartData.forEach((val, i) => {
+            const x = i * step;
+            const y = (canvas.height / 2) + (val - 40) * 1.5;
+            if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
     });
-    ctx.stroke();
 }
 
-// --- MOTOR DE ANÁLISIS ---
+// --- CORE LOGIC ---
 function toggleMouse() {
     mouseEnabled = !mouseEnabled;
+    AudioEngine.init(); // Init audio on first interaction
     const overlay = document.getElementById('mouse-overlay');
     const btn = document.getElementById('mouseBtn');
+    
     overlay.classList.toggle('active-radar', mouseEnabled);
     btn.classList.toggle('radar-on', mouseEnabled);
     btn.innerText = mouseEnabled ? "SENSOR ACTIVO" : "INICIAR SENSOR RADAR";
+    
     if(!mouseEnabled) resetUI();
 }
 
+// Manejo de clicks en el overlay (Sensor)
 document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
-    if (!mouseEnabled) return;
+    if (!mouseEnabled || isSignalActive) return;
     e.preventDefault();
     
     const now = Date.now();
     const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
     lastClickTime = now;
 
-    let val = (e.button === 0) ? 'A' : (e.button === 2 ? 'B' : "");
+    let val = "";
+    if (e.button === 0) val = 'A'; // Click Izquierdo
+    else if (e.button === 2) val = 'B'; // Click Derecho
 
     if(val !== "") {
         sequence.push({val, diff});
         if(sequence.length > 20) sequence.shift();
         
-        // Actualizar gráfico (A sube, B baja)
         const lastVal = chartData[chartData.length - 1];
-        chartData.push(val === 'A' ? lastVal - 5 : lastVal + 5);
-        if(chartData.length > 30) chartData.shift();
-        drawChart();
+        chartData.push(val === 'A' ? lastVal - 8 : lastVal + 8);
+        if(chartData.length > 40) chartData.shift();
         
+        drawChart();
         updateLiveTrack();
         analyze();
     }
 });
 
 function analyze() {
-    if (isSignalActive) return;
+    if (isSignalActive || sequence.length < 3) return;
 
     const seqStr = sequence.map(s => s.val).join('');
-    const recentSpeed = sequence.length > 1 ? sequence[sequence.length-1].diff : 0;
+    const recentSpeed = sequence[sequence.length-1].diff;
     
-    // 1. Cálculo de Ruido
+    // Cálculo de Ruido (Volatilidad de clics)
     const oscillations = (seqStr.match(/AB|BA/g) || []).length;
     const noiseIndex = Math.min(100, Math.round((oscillations / Math.max(1, seqStr.length - 1)) * 100));
 
-    // 2. Cálculo de Poder (Aceleración)
+    // Poder de tendencia
     const power = sequence.reduce((acc, s) => {
-        return s.val === 'A' ? acc + (1000/Math.max(s.diff, 50)) : acc - (1000/Math.max(s.diff, 50));
+        let weight = 1000 / Math.max(s.diff, 40);
+        return s.val === 'A' ? acc + weight : acc - weight;
     }, 0);
 
     document.getElementById('speed-meter').innerText = `MS: ${recentSpeed}`;
     document.getElementById('noise-index').innerText = `NOISE: ${noiseIndex}%`;
     document.getElementById('power-index').innerText = `POWER: ${power.toFixed(1)}`;
 
-    let maxAllowedNoise = config.ruido[riskLevel];
-    if (flexMode) maxAllowedNoise += 15;
+    let maxNoise = config.ruido[riskLevel];
+    if (flexMode) maxNoise += 15;
 
-    const minR = config.racha[riskLevel];
-    const rachaCompra = new RegExp('A{' + minR + '}$').test(seqStr);
-    const rachaVenta = new RegExp('B{' + minR + '}$').test(seqStr);
+    const rachaReq = config.racha[riskLevel];
+    const isUp = new RegExp('A{' + rachaReq + '}$').test(seqStr);
+    const isDown = new RegExp('B{' + rachaReq + '}$').test(seqStr);
 
-    if (noiseIndex > maxAllowedNoise) {
-        updateStatus("HIGH NOISE", "WAITING FOR STABILITY", "none");
-    } else if (rachaCompra || rachaVenta) {
-        triggerSignal(rachaCompra ? "COMPRA" : "VENTA", power);
+    if (noiseIndex > maxNoise) {
+        updateStatus("HIGH NOISE", "ESTABILIZANDO FLUJO...", "none");
+    } else if (isUp || isDown) {
+        triggerSignal(isUp ? "COMPRA" : "VENTA", power);
     }
 }
 
 function triggerSignal(type, power) {
     isSignalActive = true;
-    playSignalSound(type);
+    AudioEngine.play(type);
     
     const status = document.getElementById('op-status');
     const icon = document.getElementById('big-icon');
     const term = document.getElementById('main-terminal');
-    const iaS = document.getElementById('ia-stake');
     
-    // Gestión de Capital Dinámica
+    // Martingala / Stake Logic
     const lastResult = tradeHistory[tradeHistory.length - 1];
-    const stakeText = lastResult === false ? "STAKE: X2 (RECOVERY MODE)" : "STAKE: BASE (CONSERVATIVE)";
-    iaS.innerText = stakeText;
+    document.getElementById('ia-stake').innerText = lastResult === false ? "STAKE: X2.2 (RECOVERY)" : "STAKE: BASE (SAFETY)";
 
     icon.style.display = "block";
     icon.innerText = type === "COMPRA" ? "▲" : "▼";
@@ -387,43 +416,48 @@ function triggerSignal(type, power) {
     icon.className = type === "COMPRA" ? "text-up" : "text-down";
     term.className = `terminal ${type === "COMPRA" ? 'border-up' : 'border-down'}`;
 
-    document.getElementById('ia-logic').innerText = `IA: POWER ${Math.abs(power).toFixed(1)} CONFIRMED`;
+    document.getElementById('ia-logic').innerText = `IA: VECTOR ${Math.abs(power).toFixed(1)} CONFIRMADO`;
     document.querySelectorAll('.feed-btn').forEach(b => b.classList.add('active-signal'));
     
     startCountdown();
 }
 
 function startCountdown() {
-    let timeLeft = selectedTime;
     const timerBar = document.getElementById('timer-bar');
+    timerBar.style.transition = "none";
     timerBar.style.width = "100%";
-    timerBar.style.transition = `width ${selectedTime}s linear`;
-    setTimeout(() => timerBar.style.width = "0%", 50);
+    
+    setTimeout(() => {
+        timerBar.style.transition = `width ${selectedTime}s linear`;
+        timerBar.style.width = "0%";
+    }, 50);
 
+    let timeLeft = selectedTime;
     countdownInterval = setInterval(() => {
         timeLeft--;
         if (timeLeft <= 0) {
             clearInterval(countdownInterval);
-            isSignalActive = false;
             resetUI(false);
         }
     }, 1000);
 }
 
-function resetUI(clearTrack = true) {
+function resetUI(fullReset = true) {
     clearInterval(countdownInterval);
     isSignalActive = false;
-    document.getElementById('main-terminal').className = "terminal";
+    
+    const term = document.getElementById('main-terminal');
+    term.className = "terminal";
     document.getElementById('op-status').innerText = "SYSTEM IDLE";
     document.getElementById('op-status').className = "";
     document.getElementById('op-details').innerText = "SCANNING DATA FLOW";
     document.getElementById('big-icon').style.display = "none";
-    document.getElementById('timer-bar').style.transition = "none";
     document.getElementById('timer-bar').style.width = "0%";
     document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
-    if(clearTrack) {
+    
+    if(fullReset) {
         sequence = [];
-        chartData = Array(30).fill(30);
+        chartData = Array(40).fill(40);
         drawChart();
         document.getElementById('live-track').innerHTML = '<span style="color:var(--text-dim);font-size:10px;">READY FOR SCAN</span>';
     }
@@ -431,19 +465,27 @@ function resetUI(clearTrack = true) {
 
 function logResult(win) {
     tradeHistory.push(win);
-    document.getElementById('stat-total').innerText = tradeHistory.length;
+    localStorage.setItem('tradeHistory', JSON.stringify(tradeHistory));
+    updateStats();
+    resetUI(true);
+}
+
+function updateStats() {
     const wins = tradeHistory.filter(x => x).length;
-    document.getElementById('stat-winrate').innerText = Math.round((wins/tradeHistory.length)*100) + "%";
-    resetUI();
+    const total = tradeHistory.length;
+    document.getElementById('stat-total').innerText = total;
+    document.getElementById('stat-winrate').innerText = total > 0 ? Math.round((wins/total)*100) + "%" : "0%";
 }
 
 function updateLiveTrack() {
     const track = document.getElementById('live-track');
-    track.innerHTML = sequence.slice(-10).map(s => 
-        s.val === 'A' ? '<span class="text-up">▲</span>' : '<span class="text-down">▼</span>'
+    if (sequence.length === 0) return;
+    track.innerHTML = sequence.slice(-8).map(s => 
+        `<span class="${s.val === 'A' ? 'text-up' : 'text-down'}">${s.val === 'A' ? '▲' : '▼'}</span>`
     ).join(' ');
 }
 
+// --- SELECTORS ---
 function setTime(s, btn) {
     selectedTime = s;
     document.querySelectorAll('#time-group .btn').forEach(b => b.classList.remove('active'));
@@ -452,7 +494,7 @@ function setTime(s, btn) {
 
 function setRisk(l, btn) {
     riskLevel = l;
-    document.querySelectorAll('#risk-group .btn:not(.btn-flex)').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#risk-group .btn:not(#flexBtn)').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
 }
 
@@ -467,7 +509,13 @@ function updateStatus(txt, detail, iconDisp) {
     document.getElementById('big-icon').style.display = iconDisp;
 }
 
-// Inicializar
+// Cargar historial previo
+const saved = localStorage.getItem('tradeHistory');
+if(saved) {
+    tradeHistory = JSON.parse(saved);
+    updateStats();
+}
+
 drawChart();
 </script>
 </body>
