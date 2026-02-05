@@ -165,7 +165,7 @@
             border-left: 4px solid var(--accent);
         }
 
-        .feedback-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .feedback-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
         .feed-btn {
             padding: 16px;
             border-radius: 12px;
@@ -179,7 +179,29 @@
         }
         .active-signal { opacity: 1 !important; pointer-events: auto !important; transform: scale(1.02); }
 
-        /* Estados Pro */
+        /* PANEL TÁCTIL (Se muestra solo con Radar Activo) */
+        #manual-touch-zone {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            height: 70px;
+            margin-top: 5px;
+        }
+        .touch-trigger {
+            background: #111;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #000;
+        }
+        .touch-trigger:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; background: #161b22; }
+        .t-up { color: var(--up-neon); border-color: rgba(0, 255, 136, 0.3); }
+        .t-down { color: var(--down-neon); border-color: rgba(255, 46, 99, 0.3); }
+
         .text-up { color: var(--up-neon) !important; text-shadow: 0 0 20px rgba(0, 255, 136, 0.6); }
         .text-down { color: var(--down-neon) !important; text-shadow: 0 0 20px rgba(255, 46, 99, 0.6); }
         .border-up { border-color: var(--up-neon) !important; box-shadow: 0 0 40px rgba(0, 255, 136, 0.1); }
@@ -247,6 +269,11 @@
         <button id="lossBtn" class="feed-btn" style="background:var(--down-neon)" onclick="logResult(false)">LOSS</button>
     </div>
 
+    <div id="manual-touch-zone">
+        <div class="touch-trigger t-up" onclick="registerInput('A')">▲</div>
+        <div class="touch-trigger t-down" onclick="registerInput('B')">▼</div>
+    </div>
+
     <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 10px; color: var(--text-dim); font-weight: 900;">
         <span>SESIÓN: <span id="stat-total" style="color:white">0</span></span>
         <span>ACCURACY: <span id="stat-winrate" style="color:white">0%</span></span>
@@ -264,7 +291,6 @@ const config = {
     ruido: { 1: 65, 2: 55, 3: 45 }
 };
 
-// --- AUDIO ENGINE PRO ---
 const AudioEngine = {
     ctx: null,
     init() {
@@ -276,17 +302,14 @@ const AudioEngine = {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain); gain.connect(this.ctx.destination);
-        
         osc.frequency.setValueAtTime(type === "COMPRA" ? 880 : 330, this.ctx.currentTime);
         gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
-        
         osc.start(); osc.stop(this.ctx.currentTime + 0.6);
         if(navigator.vibrate) navigator.vibrate(type === "COMPRA" ? [30, 10, 30] : [70]);
     }
 };
 
-// --- CANVAS GRAPHIC PRO ---
 const canvas = document.getElementById('flow-chart');
 const ctx = canvas.getContext('2d');
 let chartData = Array(40).fill(40);
@@ -296,22 +319,16 @@ function drawChart() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         return;
     }
-    
     requestAnimationFrame(() => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Grid lines
         ctx.strokeStyle = 'rgba(74, 144, 226, 0.05)';
         ctx.lineWidth = 1;
         for(let i=0; i<canvas.width; i+=25) {
             ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i, canvas.height); ctx.stroke();
         }
-
         ctx.beginPath();
         ctx.strokeStyle = '#4a90e2';
         ctx.lineWidth = 3;
-        ctx.lineJoin = 'round';
-        
         const step = canvas.width / (chartData.length - 1);
         chartData.forEach((val, i) => {
             const x = i * step;
@@ -322,45 +339,47 @@ function drawChart() {
     });
 }
 
-// --- CORE LOGIC ---
 function toggleMouse() {
     mouseEnabled = !mouseEnabled;
-    AudioEngine.init(); // Init audio on first interaction
+    AudioEngine.init();
     const overlay = document.getElementById('mouse-overlay');
     const btn = document.getElementById('mouseBtn');
+    const touchPanel = document.getElementById('manual-touch-zone');
     
     overlay.classList.toggle('active-radar', mouseEnabled);
     btn.classList.toggle('radar-on', mouseEnabled);
     btn.innerText = mouseEnabled ? "SENSOR ACTIVO" : "INICIAR SENSOR RADAR";
     
+    // Mostrar u ocultar botones táctiles según el radar
+    touchPanel.style.display = mouseEnabled ? "grid" : "none";
+    
     if(!mouseEnabled) resetUI();
 }
 
-// Manejo de clicks en el overlay (Sensor)
-document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
+// Función maestra de registro de entrada (SIN CAMBIOS EN LÓGICA)
+function registerInput(val) {
     if (!mouseEnabled || isSignalActive) return;
-    e.preventDefault();
     
     const now = Date.now();
     const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
     lastClickTime = now;
 
-    let val = "";
-    if (e.button === 0) val = 'A'; // Click Izquierdo
-    else if (e.button === 2) val = 'B'; // Click Derecho
+    sequence.push({val, diff});
+    if(sequence.length > 20) sequence.shift();
+    
+    const lastVal = chartData[chartData.length - 1];
+    chartData.push(val === 'A' ? lastVal - 8 : lastVal + 8);
+    if(chartData.length > 40) chartData.shift();
+    
+    drawChart();
+    updateLiveTrack();
+    analyze();
+}
 
-    if(val !== "") {
-        sequence.push({val, diff});
-        if(sequence.length > 20) sequence.shift();
-        
-        const lastVal = chartData[chartData.length - 1];
-        chartData.push(val === 'A' ? lastVal - 8 : lastVal + 8);
-        if(chartData.length > 40) chartData.shift();
-        
-        drawChart();
-        updateLiveTrack();
-        analyze();
-    }
+// Overlay Mouse
+document.getElementById('mouse-overlay').addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    registerInput(e.button === 0 ? 'A' : 'B');
 });
 
 function analyze() {
@@ -369,11 +388,9 @@ function analyze() {
     const seqStr = sequence.map(s => s.val).join('');
     const recentSpeed = sequence[sequence.length-1].diff;
     
-    // Cálculo de Ruido (Volatilidad de clics)
     const oscillations = (seqStr.match(/AB|BA/g) || []).length;
     const noiseIndex = Math.min(100, Math.round((oscillations / Math.max(1, seqStr.length - 1)) * 100));
 
-    // Poder de tendencia
     const power = sequence.reduce((acc, s) => {
         let weight = 1000 / Math.max(s.diff, 40);
         return s.val === 'A' ? acc + weight : acc - weight;
@@ -405,7 +422,6 @@ function triggerSignal(type, power) {
     const icon = document.getElementById('big-icon');
     const term = document.getElementById('main-terminal');
     
-    // Martingala / Stake Logic
     const lastResult = tradeHistory[tradeHistory.length - 1];
     document.getElementById('ia-stake').innerText = lastResult === false ? "STAKE: X2.2 (RECOVERY)" : "STAKE: BASE (SAFETY)";
 
@@ -426,7 +442,6 @@ function startCountdown() {
     const timerBar = document.getElementById('timer-bar');
     timerBar.style.transition = "none";
     timerBar.style.width = "100%";
-    
     setTimeout(() => {
         timerBar.style.transition = `width ${selectedTime}s linear`;
         timerBar.style.width = "0%";
@@ -445,16 +460,13 @@ function startCountdown() {
 function resetUI(fullReset = true) {
     clearInterval(countdownInterval);
     isSignalActive = false;
-    
-    const term = document.getElementById('main-terminal');
-    term.className = "terminal";
+    document.getElementById('main-terminal').className = "terminal";
     document.getElementById('op-status').innerText = "SYSTEM IDLE";
     document.getElementById('op-status').className = "";
     document.getElementById('op-details').innerText = "SCANNING DATA FLOW";
     document.getElementById('big-icon').style.display = "none";
     document.getElementById('timer-bar').style.width = "0%";
     document.querySelectorAll('.feed-btn').forEach(b => b.classList.remove('active-signal'));
-    
     if(fullReset) {
         sequence = [];
         chartData = Array(40).fill(40);
@@ -480,12 +492,9 @@ function updateStats() {
 function updateLiveTrack() {
     const track = document.getElementById('live-track');
     if (sequence.length === 0) return;
-    track.innerHTML = sequence.slice(-8).map(s => 
-        `<span class="${s.val === 'A' ? 'text-up' : 'text-down'}">${s.val === 'A' ? '▲' : '▼'}</span>`
-    ).join(' ');
+    track.innerHTML = sequence.slice(-8).map(s => `<span class="${s.val === 'A' ? 'text-up' : 'text-down'}">${s.val === 'A' ? '▲' : '▼'}</span>`).join(' ');
 }
 
-// --- SELECTORS ---
 function setTime(s, btn) {
     selectedTime = s;
     document.querySelectorAll('#time-group .btn').forEach(b => b.classList.remove('active'));
@@ -509,7 +518,6 @@ function updateStatus(txt, detail, iconDisp) {
     document.getElementById('big-icon').style.display = iconDisp;
 }
 
-// Cargar historial previo
 const saved = localStorage.getItem('tradeHistory');
 if(saved) {
     tradeHistory = JSON.parse(saved);
