@@ -301,7 +301,7 @@
     animation: heartbeat-green 2.5s infinite ease-in-out !important;
     border-color: rgba(0, 255, 136, 0.5) !important;
 }
-    /* Estilo base mejorado para los gatillos manuales */
+/* Estilo base mejorado para los gatillos manuales */
 .touch-trigger {
     background: #0a0d11;
     border: 1px solid var(--border);
@@ -369,13 +369,15 @@
         </div>
     </div>
 
-    <div class="input-track" id="live-track">
-        <span style="color: var(--text-dim); font-size: 11px;">ACTIVA EL RADAR PARA INICIAR</span>
-    </div>
+<!-- Campo 1: SOLO SÍMBOLOS (arriba) -->
+<div class="input-track" id="symbols-track">
+    <span style="color: var(--text-dim); font-size: 11px;">ACTIVA EL RADAR PARA INICIAR</span>
+</div>
 
+<!-- Campo 2: SOLO MENSAJES + botón undo (abajo) -->
 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
-    <div class="input-track" id="live-track" style="flex: 1; margin-bottom: 0;">
-        <span style="color: var(--text-dim); font-size: 11px;">ESPERANDO SECUENCIA...</span>
+    <div class="input-track" id="status-track" style="flex: 1; margin-bottom: 0;">
+        <span id="status-message" style="color: var(--text-dim); font-size: 11px;">ESPERANDO SECUENCIA...</span>
     </div>
     
     <button onclick="undoLastInput()" title="Borrar último" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); color: #ff2e63; width: 45px; height: 45px; border-radius: 12px; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; transition: 0.2s;">
@@ -521,7 +523,8 @@ function undoLastInput(e) {
     // 3. Ejecutar actualizaciones visuales y sonoras
     AudioEngine.play("CLICK"); 
     drawChart();
-    updateLiveTrack();
+    updateSymbols();          // ← AGREGADO: actualiza símbolos arriba
+    updateStatusMessage();    // ← AGREGADO: actualiza mensajes abajo
     analyze(); // Recalcular RUIDO y POWER tras borrar
 
     // 4. Feedback visual del botón (Compatibilidad total)
@@ -574,7 +577,8 @@ function registerInput(val) {
     if(chartData.length > 40) chartData.shift();
     
     drawChart();
-    updateLiveTrack();
+    updateSymbols();          // símbolos arriba
+    updateStatusMessage();    // mensajes abajo
     analyze();
 }
 
@@ -681,6 +685,49 @@ function analyze() {
     if (streak >= rachaReq && noiseIndex <= maxNoise) {
         triggerSignal(lastVal === 'A' ? "COMPRA" : "VENTA", power);
     }
+
+    // ACTUALIZACIÓN DE CAMPOS VISUALES (esto es lo que faltaba dentro de la función)
+    updateSymbols();          // símbolos arriba
+    updateStatusMessage();    // mensajes abajo
+}
+
+function updateStatusMessage() {
+    const statusMessage = document.getElementById('status-message');
+    
+    // Obtener noise actual
+    const noiseText = document.getElementById('noise-index').innerText.replace('NOISE: ', '');
+    const noiseNum = parseInt(noiseText) || 0;
+
+    if (noiseNum > 30) {
+        statusMessage.innerText = '⚠️ RUIDO ALTO';
+        statusMessage.style.color = '#ff2e63';
+        statusMessage.style.fontWeight = 'bold';
+    } else if (noiseNum <= 15) {
+        statusMessage.innerText = '⭐ CALIDAD ALTA';
+        statusMessage.style.color = '#00ff88';
+        statusMessage.style.fontWeight = 'bold';
+    } else {
+        statusMessage.innerText = 'ESCANEANDO...';
+        statusMessage.style.color = 'var(--accent)';
+    }
+}
+
+function updateSymbols() {
+    const symbolsTrack = document.getElementById('symbols-track');
+    
+    if (sequence.length === 0) {
+        symbolsTrack.innerHTML = mouseEnabled 
+            ? '<span style="color:var(--text-dim);font-size:12px;">ESPERANDO ENTRADAS...</span>'
+            : '<span style="color:var(--text-dim);font-size:11px;">ACTIVA EL RADAR PARA INICIAR</span>';
+        return;
+    }
+
+    // Solo símbolos, sin mensajes
+    const symbols = sequence.slice(-10).map(s => 
+        `<span class="${s.val === 'A' ? 'text-up' : 'text-down'}" style="font-size:20px;">${s.val === 'A' ? '▲' : '▼'}</span>`
+    ).join('  •  ');
+
+    symbolsTrack.innerHTML = symbols;
 }
 
 // MEJORA: Función para activar/desactivar botones de configuración
@@ -868,7 +915,6 @@ drawChart();
 
 </body>
 </html>
-
 
 
 
