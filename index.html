@@ -301,6 +301,44 @@
     animation: heartbeat-green 2.5s infinite ease-in-out !important;
     border-color: rgba(0, 255, 136, 0.5) !important;
 }
+    /* Estilo base mejorado para los gatillos manuales */
+.touch-trigger {
+    background: #0a0d11;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    z-index: 11;
+}
+
+/* Color para el botón Alcista (A) */
+.touch-trigger.t-up {
+    color: var(--up-neon);
+    border-color: rgba(0, 255, 136, 0.3);
+    box-shadow: inset 0 0 10px rgba(0, 255, 136, 0.05);
+}
+
+/* Color para el botón Bajista (B) */
+.touch-trigger.t-down {
+    color: var(--down-neon);
+    border-color: rgba(255, 46, 99, 0.3);
+    box-shadow: inset 0 0 10px rgba(255, 46, 99, 0.05);
+}
+
+/* Efecto visual al tocar/hacer clic */
+.touch-trigger.t-up:active {
+    background: rgba(0, 255, 136, 0.1);
+    transform: scale(0.95);
+}
+
+.touch-trigger.t-down:active {
+    background: rgba(255, 46, 99, 0.1);
+    transform: scale(0.95);
+}
 </style>
 </head>
 <body>
@@ -830,6 +868,7 @@ drawChart();
 
 </body>
 </html>
+
 
 
 
