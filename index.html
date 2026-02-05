@@ -223,7 +223,8 @@
 <script>
 let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
 let lastClickTime = 0, riskLevel = 2, selectedTime = 10;
-
+let isSignalActive = false;
+    
 const config = {
     racha: { 1: 3, 2: 4, 3: 5 },
     ruido: { 1: 65, 2: 55, 3: 45 }
@@ -265,6 +266,9 @@ function updateLiveTrack() {
 }
 
 function analyze() {
+    // 1. BLOQUEO: Si ya hay una señal activa operando, no recalculamos para evitar parpadeos
+    if (isSignalActive) return;
+
     const seqStr = sequence.map(s => s.val).join('');
     const oscillations = (seqStr.match(/AB|BA/g) || []).length;
     const noiseIndex = Math.min(100, Math.round((oscillations / Math.max(1, seqStr.length - 1)) * 100));
@@ -279,18 +283,28 @@ function analyze() {
     const minR = config.racha[riskLevel];
     const isChoppy = noiseIndex > maxAllowedNoise;
 
-    // CORRECCIÓN: Usamos '$' para validar solo el final de la racha
-    const rachaCompra = new RegExp('A{' + minR + ',}$').test(seqStr);
-    const rachaVenta = new RegExp('B{' + minR + ',}$').test(seqStr);
+    // 2. CAMBIO LÓGICO: Buscamos la racha exacta para disparar el evento una sola vez
+    const rachaCompra = new RegExp('A{' + minR + '}$').test(seqStr);
+    const rachaVenta = new RegExp('B{' + minR + '}$').test(seqStr);
 
     if (isChoppy) {
         updateStatus("RUIDO ALTO", "FILTRANDO VOLATILIDAD", "none");
-    } else if (rachaCompra) {
-        showSignal("COMPRA", minR);
-    } else if (rachaVenta) {
-        showSignal("VENTA", minR);
+    } else if (rachaCompra || rachaVenta) {
+        // 3. DISPARO DE SEÑAL
+        isSignalActive = true; 
+        const tipo = rachaCompra ? "COMPRA" : "VENTA";
+        showSignal(tipo, minR);
+
+        // 4. TEMPORIZADOR: La señal se mantiene visible lo que dure el tiempo seleccionado (selectedTime)
+        // Después de ese tiempo, el sistema se libera para buscar una nueva entrada.
+        setTimeout(() => {
+            isSignalActive = false;
+            resetUI(false); 
+        }, selectedTime * 1000); 
+
     } else {
-        resetUI(false);
+        // Solo reseteamos si no hay una señal activa congelada en pantalla
+        if (!isSignalActive) resetUI(false);
     }
 }
 
@@ -377,3 +391,4 @@ function logResult(win) {
 </script>
 </body>
 </html>
+
