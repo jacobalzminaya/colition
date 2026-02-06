@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+ <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <title>Quantum Alpha PRO v22 | Ultimate Edition</title>
 <style>
     :root {
@@ -361,12 +362,13 @@
             <button class="btn" id="t30" onclick="setTime(30, this)">30S</button>
             <button class="btn" id="t60" onclick="setTime(60, this)">1M</button>
         </div>
-        <div class="btn-group" id="risk-group">
-            <button class="btn" id="r1" onclick="setRisk(1, this)">N1</button>
-            <button class="btn" id="r2" onclick="setRisk(2, this)">N2</button>
-            <button class="btn" id="r3" onclick="setRisk(3, this)">N3</button>
-            <button id="flexBtn" class="btn" style="border-color:#8957e5" onclick="toggleFlexMode()">FLEX</button>
-        </div>
+<div class="btn-group" id="risk-group">
+    <button class="btn" id="r1" onclick="setRisk(1, this)">N1</button>
+    <button class="btn" id="r2" onclick="setRisk(2, this)">N2</button>
+    <button class="btn" id="r3" onclick="setRisk(3, this)">N3</button>
+    <button id="neuralBtn" class="btn" style="border-color:#00ff88; color:#00ff88" onclick="toggleNeuralMode()">NEURAL</button>
+    <button id="flexBtn" class="btn" style="border-color:#8957e5" onclick="toggleFlexMode()">FLEX</button>
+</div>
     </div>
 
 <!-- Campo 1: SOLO SÍMBOLOS (arriba) -->
@@ -416,11 +418,80 @@
 </div>
 
 <script>
+    let neuralMode = false;
+
+const NeuralCore = {
+    model: null,
+    async init() {
+        this.model = tf.sequential();
+        this.model.add(tf.layers.dense({ units: 12, inputShape: [4], activation: 'relu' }));
+        this.model.add(tf.layers.dense({ units: 8, activation: 'relu' }));
+        this.model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+        this.model.compile({ optimizer: tf.train.adam(0.01), loss: 'binaryCrossentropy' });
+        console.log("🧠 IA Inicializada");
+    },
+    async getPrediction(data) {
+        if (!this.model) return 0.5;
+        const tfData = tf.tensor2d([data]);
+        const pred = this.model.predict(tfData);
+        const val = (await pred.data())[0];
+        tfData.dispose(); pred.dispose();
+        return val;
+    },
+    async train(data, win) {
+        const xs = tf.tensor2d([data]);
+        const ys = tf.tensor2d([[win ? 1 : 0]]);
+        await this.model.fit(xs, ys, { epochs: 5 });
+        xs.dispose(); ys.dispose();
+    }
+};
+
+NeuralCore.init();
+
+function toggleNeuralMode() {
+    if(isSignalActive) return;
+    neuralMode = !neuralMode;
+    const btn = document.getElementById('neuralBtn');
+    btn.classList.toggle('active', neuralMode);
+    
+    // Feedback visual
+    const iaLogic = document.getElementById('ia-logic');
+    iaLogic.innerText = neuralMode ? "MODO NEURONAL ACTIVADO" : "MODO LÓGICA ESTÁNDAR";
+}
 // --- ESTADO ---
 let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
 let lastClickTime = 0, riskLevel = 2, selectedTime = 15;
 let isSignalActive = false, signalCooldown = false, countdownInterval = null;
-let perfectFlow = false; // Estado unificado para evitar desincronización
+let perfectFlow = false; 
+
+// --- [NUEVO] NÚCLEO DE IA ADAPTATIVA ---
+const AICore = {
+    weights: JSON.parse(localStorage.getItem('quantum_ai_weights')) || { noiseStrictness: 0 },
+    patterns: JSON.parse(localStorage.getItem('quantum_ai_patterns')) || {},
+    
+    calibrate(isWin) {
+        // 1. Pesos Dinámicos: La IA se vuelve estricta si pierde y se relaja si gana
+        if (isWin) {
+            this.weights.noiseStrictness = Math.max(-10, this.weights.noiseStrictness - 2);
+        } else {
+            this.weights.noiseStrictness += 5; 
+        }
+        localStorage.setItem('quantum_ai_weights', JSON.stringify(this.weights));
+    },
+    
+    learn() {
+        // 2. Memoria de Micro-Tendencias: Guarda el "ADN" de la secuencia ganadora
+        if (sequence.length < 4) return;
+        const dna = sequence.slice(-4).map(s => s.val).join('');
+        this.patterns[dna] = (this.patterns[dna] || 0) + 1;
+        localStorage.setItem('quantum_ai_patterns', JSON.stringify(this.patterns));
+    },
+    
+    getConfidence(dna) {
+        // 3. KNN Simplificado: Retorna nivel de coincidencia histórica
+        return this.patterns[dna] || 0;
+    }
+};
 
 const config = {
     racha: { 1: 3, 2: 4, 3: 5 },
@@ -497,7 +568,6 @@ function drawChart() {
 function undoLastInput(e) {
     if (sequence.length === 0 || isSignalActive) return;
 
-    // INTEGRACIÓN INIWEB (Mantenida intacta)
     const undoLog = {
         tabla: "nombre_personalizados",
         accion: "UNDO_INPUT",
@@ -509,7 +579,6 @@ function undoLastInput(e) {
 
     sequence.pop();
     
-    // Recalcular el gráfico para que sea 100% real (Punto 6 corregido)
     chartData = Array(40).fill(40);
     sequence.forEach(s => {
         const lastVal = chartData[chartData.length - 1];
@@ -525,7 +594,6 @@ function undoLastInput(e) {
     updateStatusMessage();
     analyze();
 
-    // Feedback visual (Punto 1 corregido)
     const btn = e ? e.currentTarget : (typeof event !== 'undefined' ? event.currentTarget : null);
     if (btn) {
         btn.style.background = "rgba(255, 46, 99, 0.3)";
@@ -545,14 +613,15 @@ function registerInput(val) {
     const now = Date.now();
     const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
     
-    // Bloqueo Anti-Spam (Punto 2 Mejoras Pro)
     if (diff > 0 && diff < 40) return;
 
     lastClickTime = now;
     AudioEngine.play("CLICK");
     
     sequence.push({val, diff});
-    if(sequence.length > 20) sequence.shift();
+    // Margen dinámico: ajustamos la historia según el tiempo seleccionado
+    let maxHistory = selectedTime <= 15 ? 15 : 25;
+    if(sequence.length > maxHistory) sequence.shift();
     
     const lastVal = chartData[chartData.length - 1] ?? 40;
     chartData.push(val === 'A' ? lastVal - 8 : lastVal + 8);
@@ -566,7 +635,7 @@ function registerInput(val) {
 
 // --- ANALISIS Y SEÑALES ---
 
-function analyze() {
+async function analyze() {
     if (isSignalActive || sequence.length < 3 || signalCooldown) return;
     
     const lastDiff = sequence[sequence.length-1].diff;
@@ -575,7 +644,6 @@ function analyze() {
     const oscillations = (seqStr.match(/AB|BA/g) || []).length;
     const noiseIndex = Math.min(100, Math.round((oscillations / Math.max(1, seqStr.length - 1)) * 100));
     
-    // Normalización de Power (Mejora Pro 1)
     let rawPower = sequence.reduce((acc, s) => {
         let weight = 1000 / Math.max(s.diff, 40);
         return s.val === 'A' ? acc + weight : acc - weight;
@@ -586,6 +654,21 @@ function analyze() {
     const iaLogic = document.getElementById('ia-logic');
     const lastVal = recent[recent.length - 1]?.val;
 
+    // --- NUEVO: PREDICCIÓN NEURONAL (MODO AVANZADO) ---
+    let neuralPrediction = 0.5;
+    if (typeof NeuralCore !== 'undefined' && NeuralCore.model) {
+        neuralPrediction = await NeuralCore.getPrediction([
+            lastDiff, 
+            lastVal === 'A' ? 1 : -1, 
+            noiseIndex, 
+            power
+        ]);
+    }
+
+    // --- IA: DETECCIÓN DE PATRONES DE ADN (KNN) ---
+    const currentDNA = sequence.slice(-4).map(s => s.val).join('');
+    const patternConfidence = AICore.getConfidence(currentDNA);
+
     if (sequence.length >= 3) {
         if (noiseIndex > 30) {
             perfectFlow = false;
@@ -593,14 +676,14 @@ function analyze() {
             if (lastVal === 'A') {
                 terminal.style.borderColor = "#ff2e63";
                 terminal.style.boxShadow = "0 0 25px rgba(255, 46, 99, 0.3)";
-                iaLogic.innerText = "⚠️ RUIDO ALTO: POSIBLE REVERSIÓN BAJISTA";
+                iaLogic.innerText = "⚠️ RUIDO ALTO: POSIBLE REVERSIÓN";
                 iaLogic.style.color = "#ff2e63";
                 terminal.classList.remove('high-noise-heart-green');
                 terminal.classList.add('high-noise-heart-red'); 
             } else {
                 terminal.style.borderColor = "#00ff88";
                 terminal.style.boxShadow = "0 0 25px rgba(0, 255, 136, 0.3)";
-                iaLogic.innerText = "⚠️ RUIDO ALTO: POSIBLE REBOTE ALCISTA";
+                iaLogic.innerText = "⚠️ RUIDO ALTO: POSIBLE REBOTE";
                 iaLogic.style.color = "#00ff88";
                 terminal.classList.remove('high-noise-heart-red');
                 terminal.classList.add('high-noise-heart-green');
@@ -612,12 +695,12 @@ function analyze() {
             if (lastVal === 'A') {
                 terminal.style.background = "linear-gradient(145deg, rgba(0, 255, 136, 0.08), var(--panel-bg))";
                 terminal.style.borderColor = "#00ff88";
-                iaLogic.innerText = "⭐ CALIDAD 100%: TENDENCIA ALCISTA LIMPIA";
+                iaLogic.innerText = "⭐ CALIDAD 100%: TENDENCIA ALCISTA";
                 iaLogic.style.color = "#00ff88";
             } else {
                 terminal.style.background = "linear-gradient(145deg, rgba(255, 46, 99, 0.08), var(--panel-bg))";
                 terminal.style.borderColor = "#ff2e63";
-                iaLogic.innerText = "⭐ CALIDAD 100%: TENDENCIA BAJISTA LIMPIA";
+                iaLogic.innerText = "⭐ CALIDAD 100%: TENDENCIA BAJISTA";
                 iaLogic.style.color = "#ff2e63";
             }
         }
@@ -629,6 +712,27 @@ function analyze() {
             iaLogic.innerText = "IA: ESCANEANDO FLUJO SEGURO...";
             iaLogic.style.color = "var(--text-dim)";
         }
+
+        if (patternConfidence > 1) {
+            iaLogic.innerText = `💎 GOLDEN PATTERN DETECTADO (CONF: ${patternConfidence})`;
+            iaLogic.style.color = "var(--accent)";
+        }
+
+        // --- GESTIÓN DE MENSAJES DE EXPERIENCIA NEURONAL ---
+        if (typeof neuralMode !== 'undefined' && neuralMode) {
+            const totalOps = tradeHistory.length;
+            const probPct = Math.round(neuralPrediction * 100);
+            
+            if (totalOps < 20) {
+                const faltan = 20 - totalOps;
+                iaLogic.innerHTML = `<span style="color:#ffb86c">IA APRENDIENDO: HAZ ${faltan} OPS MÁS</span>`;
+            } else if (totalOps < 60) {
+                const faltan = 60 - totalOps;
+                iaLogic.innerHTML = `<span style="color:var(--accent)">CALIBRANDO: ${probPct}% (FALTAN ${faltan})</span>`;
+            } else {
+                iaLogic.innerHTML = `<span style="color:#8957e5">MODO NEURAL LISTO: ${probPct}% CONF.</span>`;
+            }
+        }
     }
 
     document.getElementById('noise-index').innerText = `NOISE: ${noiseIndex}%`;
@@ -637,18 +741,29 @@ function analyze() {
     
     drawChart();
 
-    const rachaReq = config.racha[riskLevel];
-    let streak = 1;
-    for (let i = recent.length - 2; i >= 0; i--) {
-        if (recent[i].val === lastVal) streak++;
-        else break;
-    }
+    // --- LÓGICA DE DISPARO ---
+    if (typeof neuralMode !== 'undefined' && neuralMode) {
+        // DISPARO MODO NEURONAL: Solo si tiene 60 o más operaciones de experiencia
+        if (tradeHistory.length >= 60 && sequence.length >= 4) {
+            if (neuralPrediction > 0.85) triggerSignal("COMPRA", power);
+            else if (neuralPrediction < 0.15) triggerSignal("VENTA", power);
+        }
+    } else {
+        // DISPARO MODO ESTÁNDAR (Lógica original)
+        let rachaReq = config.racha[riskLevel];
+        if (patternConfidence > 3) rachaReq = Math.max(2, rachaReq - 1);
 
-    let maxNoise = config.ruido[riskLevel];
-    if (flexMode) maxNoise += 15;
+        let streak = 1;
+        for (let i = recent.length - 2; i >= 0; i--) {
+            if (recent[i].val === lastVal) streak++;
+            else break;
+        }
 
-    if (streak >= rachaReq && noiseIndex <= maxNoise) {
-        triggerSignal(lastVal === 'A' ? "COMPRA" : "VENTA", power);
+        let maxNoise = (config.ruido[riskLevel] + (flexMode ? 15 : 0)) - AICore.weights.noiseStrictness;
+
+        if (streak >= rachaReq && noiseIndex <= maxNoise) {
+            triggerSignal(lastVal === 'A' ? "COMPRA" : "VENTA", power);
+        }
     }
 }
 
@@ -672,10 +787,8 @@ function updateStatusMessage() {
     }
 }
 
-// REPARADO: Centralización de Track de Símbolos (Punto 3 corregido)
 function updateSymbols() {
     const symbolsTrack = document.getElementById('symbols-track');
-    // Si usas otro ID para el track en tu HTML, asegúrate que coincida aquí
     if (!symbolsTrack) return;
     
     if (sequence.length === 0) {
@@ -692,7 +805,6 @@ function updateSymbols() {
 }
 
 function updateLiveTrack() { 
-    // Mantenemos esta función vacía o redirigida para no romper llamadas externas
     updateSymbols(); 
 }
 
@@ -720,11 +832,14 @@ function triggerSignal(type, power) {
     document.getElementById('op-status').className = type === "COMPRA" ? "text-up" : "text-down";
     document.getElementById('big-icon').className = type === "COMPRA" ? "text-up" : "text-down";
     document.getElementById('main-terminal').className = `terminal signal-active ${type === "COMPRA" ? 'border-up' : 'border-down'}`;
-    document.getElementById('ia-logic').innerText = `IA: VECTOR ${Math.abs(power).toFixed(1)} CONFIRMADO`;
+    
+    // IA Info en la señal
+    const dna = sequence.slice(-4).map(s => s.val).join('');
+    const conf = AICore.getConfidence(dna);
+    document.getElementById('ia-logic').innerText = `IA: VECTOR CONFIRMADO (ADN CONF: ${conf})`;
     
     startCountdown();
     
-    // Cooldown de seguridad para evitar dobles clics inmediatos
     setTimeout(() => { 
         if (!isSignalActive) {
             btn.innerText = originalText;
@@ -737,7 +852,7 @@ function resetUI(fullReset = true) {
     if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
     
     isSignalActive = false;
-    signalCooldown = false; // Punto 5 corregido: Libera el bloqueo al resetear
+    signalCooldown = false; 
     
     setLockControls(false);
 
@@ -801,8 +916,8 @@ function setLockControls(lock) {
 
 function startCountdown() {
     const timerBar = document.getElementById('timer-bar');
-    timerBar.style.transition = "none";
     timerBar.style.width = "100%";
+    timerBar.style.transition = "none";
     setTimeout(() => {
         timerBar.style.transition = `width ${selectedTime}s linear`;
         timerBar.style.width = "0%";
@@ -856,6 +971,24 @@ function toggleFlexMode() {
 }
 
 function logResult(win) {
+    // --- NUEVO: APRENDIZAJE NEURONAL ---
+    // Recolectamos los datos actuales antes de resetear la UI
+    if (typeof NeuralCore !== 'undefined' && NeuralCore.model) {
+        const lastData = [
+            parseInt(document.getElementById('speed-meter').innerText.replace('MS: ', '')) || 0,
+            sequence[sequence.length-1]?.val === 'A' ? 1 : -1,
+            parseInt(document.getElementById('noise-index').innerText.replace('NOISE: ', '')) || 0,
+            parseFloat(document.getElementById('power-index').innerText.replace('POWER: ', '')) || 0
+        ];
+        
+        // La red neuronal ajusta sus pesos matemáticos basándose en si acertó o no
+        NeuralCore.train(lastData, win);
+    }
+
+    // APRENDIZAJE IA ORIGINAL: Calibración y registro de patrón (Mantenemos tu lógica)
+    AICore.calibrate(win);
+    if(win) AICore.learn();
+    
     tradeHistory.push(win);
     localStorage.setItem('tradeHistory', JSON.stringify(tradeHistory));
     updateStats();
@@ -891,7 +1024,6 @@ updateSymbols();
 
 </body>
 </html>
-
 
 
 
