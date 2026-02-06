@@ -420,7 +420,8 @@
 let mouseEnabled = false, flexMode = false, sequence = [], tradeHistory = [];
 let lastClickTime = 0, riskLevel = 2, selectedTime = 15;
 let isSignalActive = false, signalCooldown = false, countdownInterval = null;
-let perfectFlow = false;
+let perfectFlow = false; // Estado unificado para evitar desincronización
+
 const config = {
     racha: { 1: 3, 2: 4, 3: 5 },
     ruido: { 1: 65, 2: 55, 3: 45 }
@@ -491,13 +492,12 @@ function drawChart() {
     ctx.shadowBlur = 0;
 }
 
-// CORRECCIÓN: Se añade 'e' para que event.currentTarget funcione siempre
+// --- LOGICA DE ENTRADA Y MODIFICACIÓN ---
+
 function undoLastInput(e) {
-    // 1. Bloqueo de seguridad: No borrar si no hay datos o si hay una señal activa
     if (sequence.length === 0 || isSignalActive) return;
 
-    // --- INTEGRACIÓN INIWEB ---
-    // Registramos la acción de "deshacer" en la base de datos antes de borrar el dato local
+    // INTEGRACIÓN INIWEB (Mantenida intacta)
     const undoLog = {
         tabla: "nombre_personalizados",
         accion: "UNDO_INPUT",
@@ -506,68 +506,50 @@ function undoLastInput(e) {
         timestamp: new Date().toISOString()
     };
     console.log("Registrando corrección en Iniweb...", undoLog);
-    // ---------------------------
 
-    // 2. Retroceder lógica de datos
     sequence.pop();
     
-    // Ajustar el gráfico: quitamos el último punto y reponemos el inicio para mantener la longitud
-    if (chartData.length > 0) {
-        chartData.pop();
-        if (chartData.length < 40) chartData.unshift(40);
-    }
+    // Recalcular el gráfico para que sea 100% real (Punto 6 corregido)
+    chartData = Array(40).fill(40);
+    sequence.forEach(s => {
+        const lastVal = chartData[chartData.length - 1];
+        chartData.push(s.val === 'A' ? lastVal - 8 : lastVal + 8);
+        if(chartData.length > 40) chartData.shift();
+    });
 
-    // Si borramos todo, reseteamos el cronómetro de clics
     if (sequence.length === 0) lastClickTime = 0;
 
-    // 3. Ejecutar actualizaciones visuales y sonoras
     AudioEngine.play("CLICK"); 
     drawChart();
-    updateSymbols();          // ← AGREGADO: actualiza símbolos arriba
-    updateStatusMessage();    // ← AGREGADO: actualiza mensajes abajo
-    analyze(); // Recalcular RUIDO y POWER tras borrar
+    updateSymbols();
+    updateStatusMessage();
+    analyze();
 
-    // 4. Feedback visual del botón (Compatibilidad total)
-    // Usamos el evento 'e' pasado por el botón o el objeto global event
+    // Feedback visual (Punto 1 corregido)
     const btn = e ? e.currentTarget : (typeof event !== 'undefined' ? event.currentTarget : null);
-    
     if (btn) {
-        const originalBg = "rgba(255, 255, 255, 0.03)";
-        const originalBorder = "var(--border)";
-        
-        btn.style.transition = "all 0.1s ease";
         btn.style.background = "rgba(255, 46, 99, 0.3)";
         btn.style.borderColor = "#ff2e63";
         btn.style.transform = "scale(0.9)";
-        
         setTimeout(() => {
-            btn.style.background = originalBg;
-            btn.style.borderColor = originalBorder;
+            btn.style.background = "rgba(255, 255, 255, 0.03)";
+            btn.style.borderColor = "var(--border)";
             btn.style.transform = "scale(1)";
         }, 150);
     }
 }
 
-function toggleMouse() {
-    mouseEnabled = !mouseEnabled;
-    AudioEngine.init();
-    const overlay = document.getElementById('mouse-overlay');
-    const btn = document.getElementById('mouseBtn');
-    overlay.classList.toggle('active-radar', mouseEnabled);
-    btn.classList.toggle('radar-on', mouseEnabled);
-    btn.innerText = mouseEnabled ? "SENSOR ACTIVO" : "INICIAR SENSOR RADAR";
-    document.getElementById('manual-touch-zone').style.display = mouseEnabled ? "grid" : "none";
-    updateLiveTrack();
-    if(!mouseEnabled) resetUI(true);
-}
-
 function registerInput(val) {
     if (!mouseEnabled || isSignalActive || signalCooldown) return;
 
-    AudioEngine.play("CLICK");
     const now = Date.now();
     const diff = (lastClickTime === 0) ? 0 : now - lastClickTime;
+    
+    // Bloqueo Anti-Spam (Punto 2 Mejoras Pro)
+    if (diff > 0 && diff < 40) return;
+
     lastClickTime = now;
+    AudioEngine.play("CLICK");
     
     sequence.push({val, diff});
     if(sequence.length > 20) sequence.shift();
@@ -577,21 +559,12 @@ function registerInput(val) {
     if(chartData.length > 40) chartData.shift();
     
     drawChart();
-    updateSymbols();          // símbolos arriba
-    updateStatusMessage();    // mensajes abajo
+    updateSymbols();
+    updateStatusMessage();
     analyze();
 }
 
-// --- BLINDAJE ---
-const radarOverlay = document.getElementById('mouse-overlay');
-radarOverlay.addEventListener('mousedown', (e) => {
-    e.preventDefault(); 
-    if (e.button === 0) registerInput('A');
-    else if (e.button === 2) registerInput('B');
-});
-radarOverlay.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); return false; });
-radarOverlay.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-radarOverlay.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+// --- ANALISIS Y SEÑALES ---
 
 function analyze() {
     if (isSignalActive || sequence.length < 3 || signalCooldown) return;
@@ -602,23 +575,21 @@ function analyze() {
     const oscillations = (seqStr.match(/AB|BA/g) || []).length;
     const noiseIndex = Math.min(100, Math.round((oscillations / Math.max(1, seqStr.length - 1)) * 100));
     
-    const power = sequence.reduce((acc, s) => {
+    // Normalización de Power (Mejora Pro 1)
+    let rawPower = sequence.reduce((acc, s) => {
         let weight = 1000 / Math.max(s.diff, 40);
         return s.val === 'A' ? acc + weight : acc - weight;
     }, 0);
+    const power = Math.max(-100, Math.min(100, rawPower));
 
     const terminal = document.getElementById('main-terminal');
     const iaLogic = document.getElementById('ia-logic');
     const lastVal = recent[recent.length - 1]?.val;
 
-    // --- LÓGICA DE PERSISTENCIA Y ESTADOS VISUALES ---
     if (sequence.length >= 3) {
-        
         if (noiseIndex > 30) {
-            // CASO 1: RUIDO ALTO (Persistente hasta que baje de 30)
-            window.perfectFlow = false;
-            terminal.style.background = "var(--panel-bg)"; // Asegurar fondo base
-
+            perfectFlow = false;
+            terminal.style.background = "var(--panel-bg)";
             if (lastVal === 'A') {
                 terminal.style.borderColor = "#ff2e63";
                 terminal.style.boxShadow = "0 0 25px rgba(255, 46, 99, 0.3)";
@@ -636,10 +607,8 @@ function analyze() {
             }
         } 
         else if (noiseIndex <= 15) {
-            // CASO 2: CALIDAD TOTAL
-            window.perfectFlow = true; 
+            perfectFlow = true; 
             terminal.classList.remove('high-noise-heart-red', 'high-noise-heart-green');
-            
             if (lastVal === 'A') {
                 terminal.style.background = "linear-gradient(145deg, rgba(0, 255, 136, 0.08), var(--panel-bg))";
                 terminal.style.borderColor = "#00ff88";
@@ -653,25 +622,21 @@ function analyze() {
             }
         }
         else {
-            // CASO 3: FLUJO NORMAL (Reset de estilos solo aquí)
-            window.perfectFlow = false;
+            perfectFlow = false;
             terminal.classList.remove('high-noise-heart-red', 'high-noise-heart-green');
             terminal.style.background = "var(--panel-bg)";
-            terminal.style.boxShadow = "0 40px 80px rgba(0,0,0,0.8)";
             terminal.style.borderColor = "var(--border)";
             iaLogic.innerText = "IA: ESCANEANDO FLUJO SEGURO...";
             iaLogic.style.color = "var(--text-dim)";
         }
     }
 
-    // Actualización de indicadores
     document.getElementById('noise-index').innerText = `NOISE: ${noiseIndex}%`;
     document.getElementById('power-index').innerText = `POWER: ${power.toFixed(1)}`;
-    document.getElementById('speed-meter').innerText = `MS: ${lastDiff}`;
+    document.getElementById('speed-meter').innerText = `MS: ${lastDiff === 0 ? '--' : lastDiff}`;
     
     drawChart();
 
-    // Lógica de disparo de señal
     const rachaReq = config.racha[riskLevel];
     let streak = 1;
     for (let i = recent.length - 2; i >= 0; i--) {
@@ -685,18 +650,13 @@ function analyze() {
     if (streak >= rachaReq && noiseIndex <= maxNoise) {
         triggerSignal(lastVal === 'A' ? "COMPRA" : "VENTA", power);
     }
-
-    // ACTUALIZACIÓN DE CAMPOS VISUALES (esto es lo que faltaba dentro de la función)
-    updateSymbols();          // símbolos arriba
-    updateStatusMessage();    // mensajes abajo
 }
+
+// --- UI UPDATES ---
 
 function updateStatusMessage() {
     const statusMessage = document.getElementById('status-message');
-    
-    // Obtener noise actual
-    const noiseText = document.getElementById('noise-index').innerText.replace('NOISE: ', '');
-    const noiseNum = parseInt(noiseText) || 0;
+    const noiseNum = parseInt(document.getElementById('noise-index').innerText.replace('NOISE: ', '')) || 0;
 
     if (noiseNum > 30) {
         statusMessage.innerText = '⚠️ RUIDO ALTO';
@@ -712,8 +672,11 @@ function updateStatusMessage() {
     }
 }
 
+// REPARADO: Centralización de Track de Símbolos (Punto 3 corregido)
 function updateSymbols() {
     const symbolsTrack = document.getElementById('symbols-track');
+    // Si usas otro ID para el track en tu HTML, asegúrate que coincida aquí
+    if (!symbolsTrack) return;
     
     if (sequence.length === 0) {
         symbolsTrack.innerHTML = mouseEnabled 
@@ -722,30 +685,24 @@ function updateSymbols() {
         return;
     }
 
-    // Solo símbolos, sin mensajes
     const symbols = sequence.slice(-10).map(s => 
         `<span class="${s.val === 'A' ? 'text-up' : 'text-down'}" style="font-size:20px;">${s.val === 'A' ? '▲' : '▼'}</span>`
     ).join('  •  ');
-
     symbolsTrack.innerHTML = symbols;
 }
 
-// MEJORA: Función para activar/desactivar botones de configuración
-function setLockControls(lock) {
-    const btns = document.querySelectorAll('.btn-group .btn');
-    btns.forEach(b => {
-        b.disabled = lock;
-        b.style.opacity = lock ? "0.3" : "1";
-        b.style.pointerEvents = lock ? "none" : "auto";
-    });
+function updateLiveTrack() { 
+    // Mantenemos esta función vacía o redirigida para no romper llamadas externas
+    updateSymbols(); 
 }
+
+// --- CONTROL DE SISTEMA ---
 
 function triggerSignal(type, power) {
     isSignalActive = true;
     signalCooldown = true; 
     AudioEngine.play(type);
     
-    // BLOQUEAR CONTROLES
     setLockControls(true);
 
     const btn = document.getElementById('mouseBtn');
@@ -767,11 +724,79 @@ function triggerSignal(type, power) {
     
     startCountdown();
     
+    // Cooldown de seguridad para evitar dobles clics inmediatos
     setTimeout(() => { 
-        signalCooldown = false; 
-        btn.innerText = originalText;
-        btn.disabled = false;
+        if (!isSignalActive) {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
     }, 2500);
+}
+
+function resetUI(fullReset = true) {
+    if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+    
+    isSignalActive = false;
+    signalCooldown = false; // Punto 5 corregido: Libera el bloqueo al resetear
+    
+    setLockControls(false);
+
+    const timerBar = document.getElementById('timer-bar');
+    const terminal = document.getElementById('main-terminal');
+    const btn = document.getElementById('mouseBtn');
+    
+    timerBar.style.transition = "none";
+    timerBar.style.width = "0%";
+
+    terminal.classList.remove('signal-active', 'high-noise-heart-red', 'high-noise-heart-green', 'border-up', 'border-down');
+    terminal.style.background = "var(--panel-bg)";
+    terminal.style.borderColor = "var(--border)";
+    
+    document.getElementById('op-status').innerText = "SYSTEM IDLE";
+    document.getElementById('op-status').className = "";
+    document.getElementById('op-details').innerText = "SCANNING DATA FLOW";
+    document.getElementById('big-icon').style.display = "none";
+    
+    if (btn) {
+        btn.innerText = mouseEnabled ? "SENSOR ACTIVO" : "INICIAR SENSOR RADAR";
+        btn.disabled = false;
+    }
+
+    if(fullReset) {
+        sequence = []; 
+        chartData = Array(40).fill(40); 
+        lastClickTime = 0;
+        perfectFlow = false;
+        document.getElementById('speed-meter').innerText = "MS: --";
+        document.getElementById('noise-index').innerText = "NOISE: 0%";
+        document.getElementById('power-index').innerText = "POWER: 0.0";
+        drawChart(); 
+        updateSymbols();
+    }
+}
+
+// --- FUNCIONES DE SOPORTE (Config, Mouse, Stats) ---
+
+function toggleMouse() {
+    mouseEnabled = !mouseEnabled;
+    AudioEngine.init();
+    const overlay = document.getElementById('mouse-overlay');
+    const btn = document.getElementById('mouseBtn');
+    overlay.classList.toggle('active-radar', mouseEnabled);
+    btn.classList.toggle('radar-on', mouseEnabled);
+    btn.innerText = mouseEnabled ? "SENSOR ACTIVO" : "INICIAR SENSOR RADAR";
+    document.getElementById('manual-touch-zone').style.display = mouseEnabled ? "grid" : "none";
+    updateSymbols();
+    if(!mouseEnabled) resetUI(true);
+}
+
+function setLockControls(lock) {
+    const btns = document.querySelectorAll('.btn-group .btn');
+    btns.forEach(b => {
+        b.disabled = lock;
+        b.style.opacity = lock ? "0.3" : "1";
+        b.style.pointerEvents = lock ? "none" : "auto";
+    });
 }
 
 function startCountdown() {
@@ -782,6 +807,7 @@ function startCountdown() {
         timerBar.style.transition = `width ${selectedTime}s linear`;
         timerBar.style.width = "0%";
     }, 50);
+
     let timeLeft = selectedTime;
     countdownInterval = setInterval(() => {
         timeLeft--;
@@ -789,54 +815,7 @@ function startCountdown() {
     }, 1000);
 }
 
-function resetUI(fullReset = true) {
-    if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
-    isSignalActive = false;
-    
-    // DESBLOQUEAR CONTROLES (Protección para que puedas volver a configurar)
-    if (typeof setLockControls === "function") setLockControls(false);
-
-    // LIMPIEZA VISUAL DE BARRA Y TERMINAL
-    const timerBar = document.getElementById('timer-bar');
-    const terminal = document.getElementById('main-terminal');
-    
-    timerBar.style.transition = "none";
-    timerBar.style.width = "0%";
-
-    // ELIMINAR LATIDOS Y ESTADOS ACTIVOS (Para que no se queden pegados tras la señal)
-    terminal.classList.remove(
-        'signal-active', 
-        'high-noise-heart-red', 
-        'high-noise-heart-green',
-        'border-up',
-        'border-down'
-    );
-    
-    // RESET DE TEXTOS Y ESTILOS BASE
-    terminal.className = "terminal"; 
-    terminal.style.background = "var(--panel-bg)";
-    terminal.style.boxShadow = "0 40px 80px rgba(0,0,0,0.8)";
-    terminal.style.borderColor = "var(--border)";
-    
-    document.getElementById('op-status').innerText = "SYSTEM IDLE";
-    document.getElementById('op-status').className = "";
-    document.getElementById('op-details').innerText = "SCANNING DATA FLOW";
-    document.getElementById('big-icon').style.display = "none";
-    
-    // RESET DE DATOS (Solo si es un reset total)
-    if(fullReset) {
-        sequence = []; 
-        chartData = Array(40).fill(40); 
-        lastClickTime = 0;
-        window.perfectFlow = false;
-        document.getElementById('speed-meter').innerText = "MS: 0";
-        document.getElementById('noise-index').innerText = "NOISE: 0%";
-        document.getElementById('power-index').innerText = "POWER: 0.0";
-        drawChart(); 
-        updateLiveTrack();
-    }
-}
-
+// --- PERSISTENCIA Y CONFIG ---
 function saveConfig() {
     localStorage.setItem('quantum_config', JSON.stringify({
         time: selectedTime, risk: riskLevel, flex: flexMode
@@ -847,24 +826,24 @@ function loadConfig() {
     const saved = JSON.parse(localStorage.getItem('quantum_config'));
     if(saved) {
         selectedTime = saved.time; riskLevel = saved.risk; flexMode = saved.flex;
-        document.getElementById(`t${selectedTime}`).classList.add('active');
-        document.getElementById(`r${riskLevel}`).classList.add('active');
-        if(flexMode) document.getElementById('flexBtn').classList.add('active');
+        document.getElementById(`t${selectedTime}`)?.classList.add('active');
+        document.getElementById(`r${riskLevel}`)?.classList.add('active');
+        if(flexMode) document.getElementById('flexBtn')?.classList.add('active');
     } else {
-        document.getElementById('t15').classList.add('active');
-        document.getElementById('r2').classList.add('active');
+        document.getElementById('t15')?.classList.add('active');
+        document.getElementById('r2')?.classList.add('active');
     }
 }
 
 function setTime(s, btn) {
-    if(isSignalActive) return; // No permitir cambio en señal activa
+    if(isSignalActive) return;
     selectedTime = s;
     document.querySelectorAll('#time-group .btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active'); saveConfig();
 }
 
 function setRisk(l, btn) {
-    if(isSignalActive) return; // No permitir cambio en señal activa
+    if(isSignalActive) return;
     riskLevel = l;
     document.querySelectorAll('#risk-group .btn:not(#flexBtn)').forEach(b => b.classList.remove('active'));
     btn.classList.add('active'); saveConfig();
@@ -873,7 +852,7 @@ function setRisk(l, btn) {
 function toggleFlexMode() {
     if(isSignalActive) return;
     flexMode = !flexMode;
-    document.getElementById('flexBtn').classList.toggle('active'); saveConfig();
+    document.getElementById('flexBtn')?.classList.toggle('active'); saveConfig();
 }
 
 function logResult(win) {
@@ -890,32 +869,28 @@ function updateStats() {
     document.getElementById('stat-winrate').innerText = total > 0 ? Math.round((wins/total)*100) + "%" : "0%";
 }
 
-function updateLiveTrack() {
-    const track = document.getElementById('live-track');
-    if (sequence.length === 0) {
-        track.innerHTML = mouseEnabled ? '<span style="color:var(--text-dim);font-size:12px;">ESPERANDO ENTRADAS...</span>' : '<span style="color:var(--text-dim);font-size:11px;">ACTIVA EL RADAR PARA INICIAR</span>';
-        return;
-    }
-    track.innerHTML = sequence.slice(-8).map(s => `<span class="${s.val === 'A' ? 'text-up' : 'text-down'}">${s.val === 'A' ? '▲' : '▼'}</span>`).join('  •  ');
-}
+// --- EVENT LISTENERS ---
+const radarOverlay = document.getElementById('mouse-overlay');
+radarOverlay.addEventListener('mousedown', (e) => {
+    e.preventDefault(); 
+    if (e.button === 0) registerInput('A');
+    else if (e.button === 2) registerInput('B');
+});
+radarOverlay.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); return false; });
+radarOverlay.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+radarOverlay.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
 
-function updateStatus(txt, detail, iconDisp) {
-    document.getElementById('op-status').innerText = txt;
-    document.getElementById('op-details').innerText = detail;
-    document.getElementById('big-icon').style.display = iconDisp;
-}
-
+// --- INICIO ---
 loadConfig();
 const hSaved = localStorage.getItem('tradeHistory');
 if(hSaved) { tradeHistory = JSON.parse(hSaved); updateStats(); }
 drawChart();
-
+updateSymbols();
 </script>
 
 
 </body>
 </html>
-
 
 
 
